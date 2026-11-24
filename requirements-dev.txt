@@ -1,0 +1,4 @@
+# Development-only dependencies (the server itself needs only `mcp`).
+mcp>=2.0,<3.0
+pytest
+ruff

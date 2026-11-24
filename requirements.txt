@@ -1,0 +1,3 @@
+# Runtime dependency. The server is otherwise a single self-contained file,
+# so `mcp` is the only thing you must install to run it.
+mcp>=2.0,<3.0

@@ -1,0 +1,51 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "planlock-mcp"
+version = "1.0.0"
+description = "One-at-a-time plan execution enforcer for local LLMs, exposed as an MCP server."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "mahirfatih" }]
+keywords = ["mcp", "model-context-protocol", "planning", "agent", "llm", "lock"]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Libraries",
+]
+dependencies = ["mcp>=2.0,<3.0"]
+
+[dependency-groups]
+dev = ["pytest", "ruff"]
+
+[project.scripts]
+planlock = "planlock:main"
+
+[tool.hatch.build.targets.wheel]
+only-include = ["planlock.py"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/planlock.py",
+  "/pyproject.toml",
+  "/README.md",
+  "/README.tr.md",
+  "/LICENSE",
+  "/CHANGELOG.md",
+  "/CONTRIBUTING.md",
+  "/requirements.txt",
+  "/requirements-dev.txt",
+  "/.ruff.toml",
+  "/pytest.ini",
+]
