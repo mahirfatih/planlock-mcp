@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added badge lines (Python, MCP-stdio, License) at the top of `README.md` and
   `README.tr.md`, adapted from `omlx-prompt-shrink/README.md` (no PyPI badge:
   `planlock-mcp` is not published there).
+- Added `[project.urls]` metadata to `pyproject.toml` (Homepage, Repository,
+  Issues, Changelog) and a `__version__` constant plus a `--version` flag to
+  `planlock.py`, so `planlock --version` verifies an install.
 
 ### Changed
 

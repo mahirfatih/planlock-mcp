@@ -12,6 +12,7 @@ license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "mahirfatih" }]
 keywords = ["mcp", "model-context-protocol", "planning", "agent", "llm", "lock"]
+
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Environment :: Console",
@@ -25,6 +26,12 @@ classifiers = [
   "Topic :: Software Development :: Libraries",
 ]
 dependencies = ["mcp>=2.0,<3.0"]
+
+[project.urls]
+Homepage = "https://github.com/mahirfatih/planlock-mcp"
+Repository = "https://github.com/mahirfatih/planlock-mcp"
+Issues = "https://github.com/mahirfatih/planlock-mcp/issues"
+Changelog = "https://github.com/mahirfatih/planlock-mcp/blob/main/CHANGELOG.md"
 
 [dependency-groups]
 dev = ["pytest", "ruff"]

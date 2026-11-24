@@ -35,4 +35,5 @@ Everything in `docs/` is written in **English**. The Turkish quick tour is
 - [`../CONTRIBUTING.md`](../CONTRIBUTING.md) — development setup, coding rules
   and commit conventions.
 - [`../CHANGELOG.md`](../CHANGELOG.md) — release notes.
+- [`../SECURITY.md`](../SECURITY.md) — vulnerability reporting policy.
 - [`../LICENSE`](../LICENSE) — MIT license.

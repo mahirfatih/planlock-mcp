@@ -1,5 +1,6 @@
 """Plan Lock MCP — one-at-a-time plan execution enforcer for local LLMs."""
 
+import argparse
 import functools
 import os
 import re
@@ -13,6 +14,8 @@ except (ImportError, ModuleNotFoundError):
     from mcp.server.mcpserver import MCPServer as FastMCP
 
 mcp = FastMCP("planlock")
+
+__version__ = "1.0.0"
 
 OPENCODE_DIR = ".opencode"
 PLAN_FILE = os.path.join(OPENCODE_DIR, "plan.md")
@@ -253,7 +256,19 @@ def plan_fail(id: int, reason: str) -> str:
 
 
 def main() -> None:
-    """Run the MCP server over stdio (entry point for ``planlock``)."""
+    """Run the MCP server over stdio (entry point for ``planlock``).
+
+    ``--version`` prints the package version and exits without starting the
+    server, which is useful for verifying an install.
+    """
+    parser = argparse.ArgumentParser(prog="planlock")
+    parser.add_argument(
+        "--version", action="store_true", help="Print the version and exit."
+    )
+    args = parser.parse_args()
+    if args.version:
+        print(f"planlock {__version__}")
+        return
     mcp.run()
 
 
