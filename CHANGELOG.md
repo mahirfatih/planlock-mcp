@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New unit tests: `plan_next` on an empty plan file returns `PLAN_DONE`,
   `plan_done`/`plan_fail` reject terminal steps, `plan_create` creates a missing
   `.opencode/` directory, and atomic writes publish `plan.md` with mode `0o644`.
+- Added `SECURITY.md` with the vulnerability reporting policy: private channel
+  via the GitHub Security tab, response timelines, and in-scope/out-of-scope items.
 
 ### Changed
 
