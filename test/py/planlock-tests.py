@@ -234,3 +234,37 @@ def test_plan_next_strips_step_text():
     assert plan_next() == "Next step (id=1): Trimmed"
     with open(".opencode/plan.md", encoding="utf-8") as f:
         assert "- [~] 1. Trimmed\n" in f.read()
+
+
+def test_plan_next_on_empty_plan_file_returns_plan_done():
+    """20. plan_next returns PLAN_DONE when the plan file holds no step lines."""
+    os.makedirs(".opencode", exist_ok=True)
+    with open(".opencode/plan.md", "w", encoding="utf-8") as f:
+        f.write("")
+
+    assert plan_next() == "PLAN_DONE"
+
+
+def test_plan_done_and_plan_fail_on_terminal_steps_are_rejected():
+    """21. plan_done/plan_fail reject ids whose steps are already [x] or [!]."""
+    plan_create(["First"])
+    plan_next()
+    plan_done(1, "ok")
+
+    assert plan_done(1, "again") == "id=1 is not the active step"
+    assert plan_fail(1, "late") == "id=1 is not the active step"
+
+
+def test_plan_create_creates_missing_opencode_directory():
+    """22. plan_create creates the .opencode/ directory when it does not exist."""
+    assert not os.path.exists(".opencode")
+    assert plan_create(["Step"]) == "Plan Lock created: 1 step"
+    assert os.path.exists(".opencode/plan.md")
+
+
+@pytest.mark.skipif(os.name != "posix", reason="file modes are POSIX-specific")
+def test_atomic_write_publishes_readable_mode():
+    """23. Atomic writes publish plan.md with the usual 0o644 permissions."""
+    plan_create(["Step"])
+    mode = os.stat(".opencode/plan.md").st_mode & 0o777
+    assert mode == 0o644

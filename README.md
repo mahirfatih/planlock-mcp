@@ -166,7 +166,7 @@ The prompt is a reminder, not the enforcement. The lock itself is in the server.
 - **`_single_line`** collapses whitespace in step text, notes, and reasons. A newline in a tool argument cannot inject a forged `- [~]` line and bypass the lock.
 - **No in-memory plan state.** Every call re-reads the file, which keeps restarts simple and makes the on-disk plan the single source of truth.
 - **Clean stdio.** Nothing is printed to `stdout`; diagnostics do not corrupt the MCP transport.
-- The suite has 47 deterministic tests, all offline. Run `./test/test.sh` for Ruff and pytest.
+- The suite has 51 deterministic tests, all offline. Run `./test/test.sh` for Ruff and pytest.
 
 ## Limitations
 

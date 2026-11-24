@@ -5,6 +5,24 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- CI now runs on every push to `main` and on pull requests, not only manual dispatch.
+- Root `.gitignore` ignores `.opencode/.tmp_plan_*` so files left by an interrupted
+  atomic write are never committed.
+- New unit tests: `plan_next` on an empty plan file returns `PLAN_DONE`,
+  `plan_done`/`plan_fail` reject terminal steps, `plan_create` creates a missing
+  `.opencode/` directory, and atomic writes publish `plan.md` with mode `0o644`.
+
+### Changed
+
+- `_atomic_write` now sets mode `0o644` on the published file; previously the
+  restrictive `mkstemp` default (`0o600`) was inherited.
+- `actions/checkout` bumped to `v7.0.1` and `actions/setup-python` to `v7.1.0`
+  (latest as of 2026-11-24).
+
 ## [1.0.0] - 2026-11-24
 
 ### Added

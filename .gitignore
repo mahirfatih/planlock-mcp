@@ -38,6 +38,9 @@ package-lock.json
 .opencode/plan.md
 .opencode/plan.md.bak
 
+# Leftover atomic-write temporaries (only possible after a crash mid-write)
+.opencode/.tmp_plan_*
+
 # SAGE / MCP runtime memory state (SQLite WAL/SHM, locks, daemon logs)
 .wrongstack/
 

@@ -1,6 +1,6 @@
 # Testing
 
-The suite has 47 deterministic cases and needs no network access. Every test
+The suite has 51 deterministic cases and needs no network access. Every test
 file lives under `test/py/`.
 
 ## Running the suite
@@ -34,7 +34,7 @@ python3 -m pytest -q                      # when the .venv already has the deps
 | :--- | :--- |
 | [`test.sh`](../../test/test.sh) | Runner: install (or `uv`), Ruff, then pytest. |
 | [`py/test_planlock.py`](../../test/py/test_planlock.py) | 14 core tests: format, empty/blank steps, activation, lock, done/fail, completion, gitignore entries, duplicates and plan header. |
-| [`py/planlock-tests.py`](../../test/py/planlock-tests.py) | 19 extended unit tests: backup, injection safety, concurrency, id messages. |
+| [`py/planlock-tests.py`](../../test/py/planlock-tests.py) | 23 extended unit tests: backup, injection safety, concurrency, id messages, empty plan, terminal steps, atomic-write mode. |
 | [`py/integration-tests.py`](../../test/py/integration-tests.py) | 4 integration tests: full lifecycle disk audit, crash recovery, backup rotation, atomic write cleanup. |
 | [`py/regression-tests.py`](../../test/py/regression-tests.py) | 5 regression tests: CRLF/tab injection, UTF-8/emojis, heavy concurrency, foreign plan lines, empty inputs. |
 | [`py/smoke-sanity-tests.py`](../../test/py/smoke-sanity-tests.py) | 4 smoke & sanity tests: tool registration, golden path, missing plan, invalid IDs. |
@@ -51,9 +51,9 @@ the repository.
 
 | Area | Cases |
 | :--- | :--- |
-| Plan creation | format, empty list, blank step rejection, project/timestamp header |
+| Plan creation | format, empty list, blank step rejection, project/timestamp header, missing `.opencode/` directory |
 | Lock enforcement | first activation, active lock, concurrent activation |
-| Lifecycle | `[~]` → `[x]` with note, `[~]` → `[!]` with reason, `PLAN_DONE` |
+| Lifecycle | `[~]` → `[x]` with note, `[~]` → `[!]` with reason, `PLAN_DONE`, terminal-step rejection |
 | Gitignore | creation, no duplicates, preserved content, backup entry |
 | Backup | old plan written to `plan.md.bak` on recreate |
 | Injection safety | newline in step text, note, and failure reason |
