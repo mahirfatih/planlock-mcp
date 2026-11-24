@@ -1,6 +1,6 @@
 # Releasing
 
-Plan Lock is published as a Python package, `planlock-mcp`, with a `planlock`
+Plan Lock MCP is published as a Python package, `planlock-mcp`, with a `planlock`
 console script. A release is a version bump plus a tag; nothing else changes
 in the source tree.
 

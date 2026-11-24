@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# test/test.sh — Plan Lock test runner.
+# test/test.sh — Plan Lock MCP test runner.
 #
 # Usage:
 #   ./test/test.sh                 # run full test suite (lint + all tests)

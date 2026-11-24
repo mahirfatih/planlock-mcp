@@ -1,4 +1,4 @@
-"""Plan Lock — one-at-a-time plan execution enforcer for local LLMs (MCP server)."""
+"""Plan Lock MCP — one-at-a-time plan execution enforcer for local LLMs."""
 
 import functools
 import os

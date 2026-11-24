@@ -1,4 +1,4 @@
-"""Regression tests for Plan Lock.
+"""Regression tests for Plan Lock MCP.
 
 Guards against reintroduction of past bugs, edge-cases, and formatting anomalies:
 - Input sanitization (line breaks, tab characters, CRLF injection)

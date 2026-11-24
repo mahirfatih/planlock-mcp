@@ -1,4 +1,4 @@
-"""Integration tests for Plan Lock.
+"""Integration tests for Plan Lock MCP.
 
 Tests filesystem interactions, atomicity, crash-recovery, process boundary,
 file permissions, backup overwrite cycles, and multi-session integration.

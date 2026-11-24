@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for your interest in **Plan Lock**. This is a small, dependency-light MCP
+Thanks for your interest in **Plan Lock MCP**. This is a small, dependency-light MCP
 server, so the contribution surface is intentionally narrow.
 
 ## Development setup

@@ -1,4 +1,4 @@
-"""Smoke & Sanity tests for Plan Lock.
+"""Smoke & Sanity tests for Plan Lock MCP.
 
 Fast, critical path sanity checks to verify the system works in its most basic
 and critical workflows. Designed to execute in sub-seconds before deeper testing.

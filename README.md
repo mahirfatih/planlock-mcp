@@ -1,6 +1,6 @@
-# Plan Lock
+# Plan Lock MCP
 
-Plan Lock is an MCP server that makes an LLM work through a markdown plan one atomic step at a time, holding a lock on the active step until it is resolved.
+Plan Lock MCP makes an LLM work through a markdown plan one atomic step at a time, holding a lock on the active step until it is resolved.
 
 [English](./README.md) | [Türkçe](./README.tr.md)
 
@@ -79,7 +79,7 @@ The header records the project name (basename of the working directory) and the 
 
 ## 🏗️ Architecture
 
-Plan Lock is a thin enforcement layer around one markdown file. The model carries no plan state in memory: every tool call re-reads `.opencode/plan.md`, validates the requested transition, and writes the whole file back atomically. The file is the source of truth; the server is the referee.
+Plan Lock MCP is a thin enforcement layer around one markdown file. The model carries no plan state in memory: every tool call re-reads `.opencode/plan.md`, validates the requested transition, and writes the whole file back atomically. The file is the source of truth; the server is the referee.
 
 ```mermaid
 flowchart LR
@@ -149,7 +149,7 @@ The `cwd` matters: it decides which project's `.opencode/plan.md` the server rea
 Add this directive to the agent's system prompt:
 
 ```text
-Plan Lock is active. Call only one tool at a time.
+Plan Lock MCP is active. Call only one tool at a time.
 Before starting a coding task, call plan_create.
 Before each step, call plan_next and work only on the step it returns.
 When the step finishes, call plan_done, or plan_fail if it failed.

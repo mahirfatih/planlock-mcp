@@ -1,6 +1,6 @@
 # Test
 
-Local test runner for Plan Lock. Everything is one command; there is no device
+Local test runner for Plan Lock MCP. Everything is one command; there is no device
 matrix and nothing to install beyond the dev dependencies.
 
 The full strategy — the suite map and the flags — lives in

@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "planlock-mcp"
 version = "1.0.0"
-description = "One-at-a-time plan execution enforcer for local LLMs, exposed as an MCP server."
+description = "Plan Lock MCP: one-at-a-time plan execution enforcer for local LLMs, exposed as an MCP server."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"

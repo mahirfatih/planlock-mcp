@@ -1,10 +1,10 @@
-# Plan Lock 🔒
+# Plan Lock MCP 🔒
 
 [English](./README.md) | **Türkçe**
 
-> **Plan Lock — yerel LLM'ler için tek adımlık plan yürütme kilidi (MCP sunucusu).**
+> **Plan Lock MCP — yerel LLM'ler için tek adımlık plan yürütme kilidi (MCP sunucusu).**
 
-Plan Lock, markdown plan dosyaları üzerinde çalışan yerel/otonom kod ajanları
+Plan Lock MCP, markdown plan dosyaları üzerinde çalışan yerel/otonom kod ajanları
 (OpenCode, Claude Code vb.) için Model Context Protocol (MCP) sunucusudur.
 Açık bir **kilit mekanizması** ile ajanın aynı anda birden fazla adımı başlatmasını
 engeller.
@@ -91,7 +91,7 @@ Başlık, proje adını (çalışma dizininin adı) ve oluşturma zamanını uni
 
 ## 🏗️ Mimari
 
-Plan Lock, tek bir markdown dosyası etrafında çalışan ince bir zorlama katmanıdır.
+Plan Lock MCP, tek bir markdown dosyası etrafında çalışan ince bir zorlama katmanıdır.
 Model planda durum tutmaz: her araç çağrısı `.opencode/plan.md` dosyasını yeniden
 okur, istenen geçişi doğrular ve dosyanın tamamını atomik olarak yazar. Dosya
 tek doğruluk kaynağı, sunucu ise hakemdir.
@@ -180,7 +180,7 @@ MCP istemci yapılandırması (`opencode.json`):
 Ajan sistem promptuna eklenecek kural:
 
 ```text
-Plan Lock etkin. Aynı anda YALNIZCA 1 araç çağırabilirsin.
+Plan Lock MCP etkin. Aynı anda YALNIZCA 1 araç çağırabilirsin.
 Yeni bir kodlama görevi öncesi plan_create çağır.
 Her adımdan önce plan_next çağır ve yalnızca dönen adım üzerinde çalış.
 Adım bitince plan_done (başarısızsa plan_fail) çağır.
