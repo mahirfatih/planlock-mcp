@@ -38,18 +38,18 @@ def test_regression_crlf_and_tabs_sanitization():
 
 
 def test_regression_unicode_and_emojis():
-    """Regression: UTF-8 encoding support for Turkish characters and emojis."""
-    steps = ["1. Adım: Veritabanı şemasını hazırla 🚀", "2. Adım: Türkçe karakter testi (ğüşiöçİ)"]
+    """Regression: UTF-8 encoding support for accented characters and emojis."""
+    steps = ["1. Étape: préparer le schéma 🚀", "2. Étape: test des accents (äöüéè)"]
     plan_create(steps)
 
     res1 = plan_next()
-    assert "Veritabanı şemasını hazırla 🚀" in res1
+    assert "Étape: préparer le schéma 🚀" in res1
 
-    res_done = plan_done(1, "Başarıyla tamamlandı ✔️")
-    assert "Başarıyla tamamlandı ✔️" in res_done
+    res_done = plan_done(1, "Terminé avec succès ✔️")
+    assert "Terminé avec succès ✔️" in res_done
 
     res2 = plan_next()
-    assert "Türkçe karakter testi (ğüşiöçİ)" in res2
+    assert "test des accents (äöüéè)" in res2
 
 
 def test_regression_concurrent_rapid_next_and_done():

@@ -28,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `_atomic_write` now sets mode `0o644` on the published file; previously the
   restrictive `mkstemp` default (`0o600`) was inherited.
+- Replaced Turkish test fixtures in `regression-tests.py` with French/German
+  accented + emoji data so Python files contain no Turkish text.
 - `actions/checkout` bumped to `v7.0.1` and `actions/setup-python` to `v7.1.0`
   (latest as of 2026-11-24).
 
