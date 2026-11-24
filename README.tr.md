@@ -1,5 +1,9 @@
 # Plan Lock MCP 🔒
 
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
+![MCP](https://img.shields.io/badge/MCP-stdio-lightgrey)
+![License](https://img.shields.io/badge/license-MIT-blue)
+
 [English](./README.md) | **Türkçe**
 
 > **Plan Lock MCP — yerel LLM'ler için tek adımlık plan yürütme kilidi (MCP sunucusu).**

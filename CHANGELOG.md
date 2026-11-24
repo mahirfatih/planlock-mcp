@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `.opencode/` directory, and atomic writes publish `plan.md` with mode `0o644`.
 - Added `SECURITY.md` with the vulnerability reporting policy: private channel
   via the GitHub Security tab, response timelines, and in-scope/out-of-scope items.
+- Added badge lines (Python, MCP-stdio, License) at the top of `README.md` and
+  `README.tr.md`, adapted from `omlx-prompt-shrink/README.md` (no PyPI badge:
+  `planlock-mcp` is not published there).
 
 ### Changed
 
