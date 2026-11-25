@@ -1,14 +1,18 @@
 # Plan Lock MCP
 
+[![CI](https://github.com/mahirfatih/planlock-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/mahirfatih/planlock-mcp/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 ![MCP](https://img.shields.io/badge/MCP-stdio-lightgrey)
+![Tests](https://img.shields.io/badge/tests-62%20passed-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
 Plan Lock MCP makes an LLM work through a markdown plan one atomic step at a time, holding a lock on the active step until it is resolved.
 
 [English](./README.md) | [Türkçe](./README.tr.md)
 
-## The Problem
+---
+
+## 🎯 The problem
 
 Local coding models — especially the 30B class such as Qwen3-Coder — tend to emit eight to ten tool and shell calls in a single turn when asked to change code. Every call returns its output into the same conversation. The context window fills with interleaved command output, it becomes hard to tell which result belongs to which command, and a failed step is buried next to unrelated successful ones.
 
@@ -20,16 +24,22 @@ The result is slower and more chaotic work. Parallelism is often presented as a 
 
 The technical term for emitting several tool calls in one turn is **parallel tool calling**. The failure described above is narrower: the calls have no dependency order. We call it **uncoordinated fan-out** — also described as *tool call flooding* or *over-eager tool use*. When the same turn edits several files it becomes *fan-out editing* or *scattergun editing*: shots go everywhere without sequencing. The conversation then ends up in **context thrashing** (*state thrashing*), where results interleave and state keeps changing without settling. Parallelism is not the problem; the missing coordination is. Plan Lock replaces that fan-out with one explicit transition at a time.
 
-## The Idea
+> **In short:** the tool layer, not the prompt, decides which step may run now. Everything else waits.
+
+---
+
+## 💡 The idea
 
 - **One atomic, verifiable step at a time.** A step has a clear boundary: it is started, then either completed with a note or failed with a reason.
 - **The plan lives outside the model.** It is a markdown file, not a conversation history. The model re-reads it when it needs state instead of carrying the whole task history in context.
 - **The lock is enforced by the server, not by the prompt.** While a step is `[~]`, `plan_next` refuses to activate another one. Discipline is a property of the tool layer.
 - **Transitions are idempotent and crash-safe:** `[ ]` → `[~]` → `[x]` / `[!]`. State is on disk, so after a crash or restart the model continues from the marked step rather than guessing.
 
-## How it works
+---
 
-The usual loop is:
+## ⚙️ How it works
+
+### 1. The loop
 
 1. `plan_create(steps)` writes a fresh plan and backs up any previous one.
 2. `plan_next()` activates the first pending step and returns its id, the absolute plan path and its text:
@@ -52,6 +62,8 @@ flowchart LR
     B -->|no pending| J["PLAN_DONE"]
 ```
 
+### 2. Tool contract
+
 | Tool | Parameters | Behaviour |
 | :--- | :--- | :--- |
 | `plan_create` | `steps: list[str]` | Writes the plan file (root `plan.md` or `.opencode/plan.md`), prepares the ignore rules, backs up an existing plan, and returns the absolute path. |
@@ -61,17 +73,43 @@ flowchart LR
 
 A step cannot be started twice: the server checks the active lock before activating anything else. Completed and failed steps are terminal.
 
-## Plan file
+### 3. Step states
 
-The plan sits next to the code when the working directory looks like a project root: it contains `.git`, `pyproject.toml`, `package.json`, `Cargo.toml` or `go.mod`, so the file is `<cwd>/plan.md`. Any other directory — a scratch folder, a home directory — keeps it at `<cwd>/.opencode/plan.md`, where a loose markdown file is less intrusive. Both paths are relative to the server's working directory and nothing is written to the home directory, so each project keeps its own independent plan.
+```mermaid
+stateDiagram-v2
+    [*] --> Pending: plan_create
+    Pending --> Active: plan_next (only when no step is [~])
+    Active --> Completed: plan_done(id, note)
+    Active --> Failed: plan_fail(id, reason)
+    Active --> Active: plan_next → "Plan Lock active" (rejected)
+    Completed --> [*]
+    Failed --> [*]
+```
 
-`plan_create` reports the absolute path it wrote:
+Only one step can be `Active` at a time. `Completed` and `Failed` are terminal: `[x]` carries a `— note:` suffix and `[!]` a `— error:` suffix. `plan_create` resets the cycle and backs up the previous file.
+
+---
+
+## 📂 Plan file
+
+### Location rule
+
+The plan sits next to the code when the working directory looks like a project root: it contains `.git`, `pyproject.toml`, `package.json`, `Cargo.toml` or `go.mod`. Any other directory, such as a scratch folder or a home directory, keeps the plan in `.opencode/`, where a loose markdown file is less intrusive.
+
+| Working directory | Plan file | Ignore rules |
+| :--- | :--- | :--- |
+| Project root (marker present) | `<cwd>/plan.md` | `<cwd>/.gitignore`, created when missing |
+| Other directory | `<cwd>/.opencode/plan.md` | `.opencode/.gitignore` |
+
+Both paths are relative to the server's working directory and nothing is written to the home directory, so each project keeps its own independent plan. `plan_create` reports the absolute path it wrote:
 
 ```text
 Plan Lock created: 3 steps -> /home/user/projects/api/plan.md
 ```
 
-so the model always knows which file is the source of truth without searching for it.
+The model always knows which file is the source of truth without searching for it.
+
+### Format
 
 ```markdown
 # Plan — myproject
@@ -85,8 +123,6 @@ so the model always knows which file is the source of truth without searching fo
 
 The header records the project name (basename of the working directory) and the creation time as a unix timestamp.
 
-A real, fully completed plan from the macOS project `media-studio` is kept in [`examples/plan.md`](./examples/plan.md). It shows six resolved steps, each with a note; that project reported 441 tests passing and a clean build.
-
 | Marker | Meaning |
 | :---: | :--- |
 | `[ ]` | Pending. |
@@ -94,7 +130,13 @@ A real, fully completed plan from the macOS project `media-studio` is kept in [`
 | `[x]` | Completed, with a `— note:` suffix. Terminal. |
 | `[!]` | Failed, with a `— error:` suffix. Terminal. |
 
+A real, fully completed plan from the macOS project `media-studio` is kept in [`examples/plan.md`](./examples/plan.md). It shows six resolved steps, each with a note; that project reported 441 tests passing and a clean build.
+
+### Backup and ignore handling
+
 `plan_create` also keeps the plan out of version control. A root-level plan is added to the working directory's `.gitignore`, which is created when missing; existing lines are preserved and entries are never duplicated. The `.opencode/` fallback gets its own `.opencode/.gitignore` with `plan.md`, `plan.md.bak` and `.gitignore` itself. Either way the plan and its backup never show up as untracked. When a new plan replaces an old one, the old content is written to the backup file next to it first.
+
+---
 
 ## 🏗️ Architecture
 
@@ -124,24 +166,11 @@ How to read it:
 - **The plan is the memory.** Each call starts by reading the file, so a crash or restart loses nothing.
 - **Writes are atomic and serialized.** `tempfile.mkstemp` + `os.replace` under `threading.RLock` prevent partial files and double activation.
 
-### Step states
+---
 
-```mermaid
-stateDiagram-v2
-    [*] --> Pending: plan_create
-    Pending --> Active: plan_next (only when no step is [~])
-    Active --> Completed: plan_done(id, note)
-    Active --> Failed: plan_fail(id, reason)
-    Active --> Active: plan_next → "Plan Lock active" (rejected)
-    Completed --> [*]
-    Failed --> [*]
-```
+## 🚀 Install & configure
 
-Only one step can be `Active` at a time. `Completed` and `Failed` are terminal: `[x]` carries a `— note:` suffix and `[!]` a `— error:` suffix. `plan_create` resets the cycle and backs up the previous file.
-
-## Install & Configure
-
-Install the package, or run the single file directly:
+### 1. Install
 
 ```bash
 pip install .          # provides the `planlock` console script
@@ -149,6 +178,8 @@ python3 /path/to/planlock.py
 ```
 
 Verify the install with `planlock --version` (prints `planlock 1.0.0`).
+
+### 2. Register the MCP server
 
 Register the server with the MCP client (for example `opencode.json`):
 
@@ -167,6 +198,8 @@ Register the server with the MCP client (for example `opencode.json`):
 
 The `cwd` matters: it decides which project the server belongs to, and whether the plan sits at the project root or under `.opencode/`.
 
+### 3. Agent prompt
+
 Add this directive to the agent's system prompt:
 
 ```text
@@ -180,17 +213,45 @@ If in doubt, read the plan file at the path plan_create reported.
 
 The prompt is a reminder, not the enforcement. The lock itself is in the server.
 
-## Design notes
+---
+
+## 🧱 Design notes
 
 - **`threading.RLock` with a decorator** serializes each read-check-write cycle inside one server process, so two simultaneous tool calls cannot both see an unlocked plan and activate the same step.
 - **Atomic writes** use `tempfile.mkstemp` in the target directory plus `os.replace`. The temporary file and the directory are fsynced, so a crash or power loss cannot leave a half-written or vanished plan, and the rename stays on the same filesystem.
 - **`_single_line`** collapses whitespace in step text, notes, and reasons. A newline in a tool argument cannot inject a forged `- [~]` line and bypass the lock.
 - **No in-memory plan state.** Every call re-reads the file, which keeps restarts simple and makes the on-disk plan the single source of truth.
 - **Clean stdio.** Nothing is printed to `stdout`; diagnostics do not corrupt the MCP transport.
-- The suite has 62 deterministic tests, all offline. Run `./test/test.sh` for Ruff and pytest.
 
-## Limitations
+---
 
-The prompt does not make the model perfectly disciplined. It can still decide to skip the plan, work on a later step, or forget to release a lock. The MCP checks make this visible rather than silent: an out-of-order step is rejected instead of quietly corrupting the plan. Recovery is manual but cheap — read the plan file at the path `plan_create` returned, see the `[~]` step, and either finish it with `plan_done` or record the failure with `plan_fail`.
+## 🧪 Testing
+
+The suite has 62 deterministic tests, all offline.
+
+```bash
+./test/test.sh                                   # Ruff + pytest
+./test/test.sh --no-install                      # skip dependency installation
+```
+
+The full suite map and flags live in [`docs/testing/TESTING.md`](./docs/testing/TESTING.md).
+
+---
+
+## ⚠️ Limitations
+
+The prompt does not make the model perfectly disciplined. It can still decide to skip the plan, work on a later step, or forget to release a lock. The MCP checks make this visible rather than silent: an out-of-order step is rejected instead of quietly corrupting the plan. Recovery is manual but cheap: read the plan file at the path `plan_create` returned, see the `[~]` step, and either finish it with `plan_done` or record the failure with `plan_fail`.
 
 The lock is per server process. Two independent server processes pointed at the same working directory are not serialized against each other. There is also no validation of a plan file that was edited by hand into an invalid shape, such as more than one `[~]` step or ids that skip numbers; `plan_create` always writes a well-formed plan, but hand-edited files can confuse the parser. A duplicated id is tolerated: `plan_done` and `plan_fail` prefer the active line, so the lock can still be released.
+
+---
+
+## 📚 Documentation
+
+| Document | Purpose |
+| :--- | :--- |
+| [`docs/README.md`](./docs/README.md) | Index of the repository documentation. |
+| [`CONTRIBUTING.md`](./CONTRIBUTING.md) | Setup, test and commit conventions. |
+| [`CHANGELOG.md`](./CHANGELOG.md) | Release history. |
+| [`SECURITY.md`](./SECURITY.md) | Vulnerability reporting policy. |
+| [`LICENSE`](./LICENSE) | MIT license. |

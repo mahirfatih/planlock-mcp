@@ -55,6 +55,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Restructured `README.md` and `README.tr.md` with icon-prefixed hierarchical
+  sections, separators, callouts and summary tables, following the documentation
+  style of `net-traffic-control-ios`. All Mermaid diagrams, tool response strings
+  and the plan header example stayed the same.
 - The plan now lives at `<cwd>/plan.md` when the working directory contains a
   project marker (`.git`, `pyproject.toml`, `package.json`, `Cargo.toml`, or
   `go.mod`). Other directories keep using `<cwd>/.opencode/plan.md`.
