@@ -4,6 +4,7 @@
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 ![MCP](https://img.shields.io/badge/MCP-stdio-lightgrey)
 ![Tests](https://img.shields.io/badge/tests-70%20passed-brightgreen)
+[![PyPI](https://img.shields.io/pypi/v/planlock-mcp)](https://pypi.org/project/planlock-mcp/)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
 Plan Lock MCP makes an LLM work through a markdown plan one atomic step at a time, holding a lock on the active step until it is resolved.

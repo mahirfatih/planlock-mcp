@@ -4,6 +4,7 @@
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 ![MCP](https://img.shields.io/badge/MCP-stdio-lightgrey)
 ![Tests](https://img.shields.io/badge/tests-70%20passed-brightgreen)
+[![PyPI](https://img.shields.io/pypi/v/planlock-mcp)](https://pypi.org/project/planlock-mcp/)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
 [English](./README.md) | **Türkçe**
