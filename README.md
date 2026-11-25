@@ -79,7 +79,7 @@ The header records the project name (basename of the working directory) and the 
 | `[x]` | Completed, with a `— note:` suffix. Terminal. |
 | `[!]` | Failed, with a `— error:` suffix. Terminal. |
 
-`plan_create` also creates or updates `.opencode/.gitignore` with `plan.md` and `plan.md.bak`, so neither the plan nor its backup is committed. When a new plan replaces an old one, the old content is written to `.opencode/plan.md.bak` first.
+`plan_create` also creates or updates `.opencode/.gitignore` with `plan.md`, `plan.md.bak` and `.gitignore` itself, so neither the plan nor its backup is committed and a generated `.opencode/` never shows up as untracked. When a new plan replaces an old one, the old content is written to `.opencode/plan.md.bak` first.
 
 ## 🏗️ Architecture
 
@@ -168,14 +168,14 @@ The prompt is a reminder, not the enforcement. The lock itself is in the server.
 ## Design notes
 
 - **`threading.RLock` with a decorator** serializes each read-check-write cycle inside one server process, so two simultaneous tool calls cannot both see an unlocked plan and activate the same step.
-- **Atomic writes** use `tempfile.mkstemp` in the target directory plus `os.replace`. A crash cannot leave a half-written plan, and the rename stays on the same filesystem.
+- **Atomic writes** use `tempfile.mkstemp` in the target directory plus `os.replace`. The temporary file and the directory are fsynced, so a crash or power loss cannot leave a half-written or vanished plan, and the rename stays on the same filesystem.
 - **`_single_line`** collapses whitespace in step text, notes, and reasons. A newline in a tool argument cannot inject a forged `- [~]` line and bypass the lock.
 - **No in-memory plan state.** Every call re-reads the file, which keeps restarts simple and makes the on-disk plan the single source of truth.
 - **Clean stdio.** Nothing is printed to `stdout`; diagnostics do not corrupt the MCP transport.
-- The suite has 51 deterministic tests, all offline. Run `./test/test.sh` for Ruff and pytest.
+- The suite has 57 deterministic tests, all offline. Run `./test/test.sh` for Ruff and pytest.
 
 ## Limitations
 
 The prompt does not make the model perfectly disciplined. It can still decide to skip the plan, work on a later step, or forget to release a lock. The MCP checks make this visible rather than silent: an out-of-order step is rejected instead of quietly corrupting the plan. Recovery is manual but cheap — read `.opencode/plan.md`, see the `[~]` step, and either finish it with `plan_done` or record the failure with `plan_fail`.
 
-The lock is per server process. Two independent server processes pointed at the same working directory are not serialized against each other. There is also no validation of a plan file that was edited by hand into an invalid shape, such as duplicate ids or more than one `[~]` step; `plan_create` always writes a well-formed plan, but hand-edited files can confuse the parser.
+The lock is per server process. Two independent server processes pointed at the same working directory are not serialized against each other. There is also no validation of a plan file that was edited by hand into an invalid shape, such as more than one `[~]` step or ids that skip numbers; `plan_create` always writes a well-formed plan, but hand-edited files can confuse the parser. A duplicated id is tolerated: `plan_done` and `plan_fail` prefer the active line, so the lock can still be released.

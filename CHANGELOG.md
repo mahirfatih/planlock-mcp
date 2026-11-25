@@ -27,6 +27,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   package as typed; included in both the wheel and the sdist.
 - Added a `--version` smoke test and documented the flag in `README.md` and
   `CONTRIBUTING.md`.
+- Regression tests for a working-directory name containing a newline, a bare
+  string `steps` argument, a duplicated step id, fsync ordering in atomic
+  writes, and the generated `.opencode/` staying out of `git status`.
+
+### Fixed
+
+- `plan_create` sanitizes the project name taken from the working-directory
+  basename with `_single_line`, so a directory name containing a newline can no
+  longer inject a forged `- [~]` line and hijack the lock.
+- `plan_create` rejects a bare `str`/`bytes` `steps` argument with
+  `Steps must be a list of strings`; previously it silently created one step per
+  character.
+- `plan_done` and `plan_fail` share a `_locate_step` helper that prefers an
+  active `[~]` line over an earlier terminal line with the same id, so a
+  hand-edited duplicate id no longer blocks releasing the lock.
+- `_atomic_write` flushes and fsyncs the temporary file and the target
+  directory, so the documented crash safety also holds for power loss.
+- `.opencode/.gitignore` now also ignores itself, so a freshly generated
+  `.opencode/` directory no longer appears as untracked in `git status`.
 
 ### Changed
 

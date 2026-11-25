@@ -107,13 +107,14 @@ def test_plan_completed_all():
 
 
 def test_gitignore_created():
-    """10. plan_create adds both plan.md and plan.md.bak to .opencode/.gitignore."""
+    """10. plan_create adds plan.md, plan.md.bak and itself to .opencode/.gitignore."""
     plan_create(["Step"])
 
     with open(".opencode/.gitignore", encoding="utf-8") as f:
         lines = [line.strip() for line in f.read().splitlines()]
     assert "plan.md" in lines
     assert "plan.md.bak" in lines
+    assert ".gitignore" in lines
 
 
 def test_gitignore_no_duplicates():

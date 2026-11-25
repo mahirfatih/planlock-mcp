@@ -16,14 +16,14 @@ in [`CONTRIBUTING.md`](../CONTRIBUTING.md); the working tour is in the
 | [`py/test_planlock.py`](./py/test_planlock.py) | 14 core unit tests: format, empty/blank steps, activation, lock, done/fail, gitignore entries, plan header. |
 | [`py/planlock-tests.py`](./py/planlock-tests.py) | 23 unit tests: format, activation, lock, lifecycle, gitignore, backup, injection safety, concurrency, atomic-write mode. |
 | [`py/integration-tests.py`](./py/integration-tests.py) | 4 integration tests: full lifecycle disk audit, crash-recovery, multi-generation backup rotation, atomic write cleanup. |
-| [`py/smoke-sanity-tests.py`](./py/smoke-sanity-tests.py) | 4 smoke & sanity tests: tool registration, golden path flow, missing plan handling, invalid ID safety. |
-| [`py/regression-tests.py`](./py/regression-tests.py) | 5 regression tests: CRLF/tab injection, UTF-8/emojis, heavy concurrency locks, foreign plan lines, empty inputs. |
+| [`py/smoke-sanity-tests.py`](./py/smoke-sanity-tests.py) | 5 smoke & sanity tests: tool registration, golden path flow, missing plan handling, invalid ID safety, `--version`. |
+| [`py/regression-tests.py`](./py/regression-tests.py) | 10 regression tests: CRLF/tab injection, UTF-8/emojis, heavy concurrency locks, foreign plan lines, empty inputs, project-name injection, non-list steps, duplicate ids, fsync ordering, generated `.opencode/` staying out of `git status`. |
 | [`py/planlock-mcp-tests.py`](./py/planlock-mcp-tests.py) | 1 E2E test: spawns the server and drives JSON-RPC handshake, `tools/list` and two `tools/call` over STDIO wire. |
 
 ## Quick start
 
 ```bash
-./test/test.sh                                   # deps + ruff + all 51 tests
+./test/test.sh                                   # deps + ruff + all 57 tests
 ./test/test.sh --unit                            # unit tests only
 ./test/test.sh --integration                     # integration tests
 ./test/test.sh --e2e                             # stdio transport E2E

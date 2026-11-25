@@ -59,8 +59,9 @@ flowchart LR
 - Plan dosyası çalışma dizinine göre **`.opencode/plan.md`** konumundadır;
   sabit yol yoktur, ev dizinine yazılmaz. Her proje kendi planını tutar.
 - Yeni plan oluşturulurken mevcut plan `.opencode/plan.md.bak` olarak yedeklenir.
-- `.opencode/.gitignore` otomatik olarak `plan.md` ve `plan.md.bak` girdileriyle
-  güncellenir; kök `.gitignore` değiştirilmez.
+- `.opencode/.gitignore` otomatik olarak `plan.md`, `plan.md.bak` ve `.gitignore`
+  girdileriyle güncellenir; kök `.gitignore` değiştirilmez. Böylece üretilen
+  `.opencode/` dizini `git status` çıktısında görünmez.
 - Tüm yazımlar atomic'tir (`tempfile.mkstemp` + `os.replace`).
 - Durum değişiklikleri `_STATE_LOCK` ile serileştirilir; eşzamanlı çağrılar aynı
   adımı açamaz.

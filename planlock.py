@@ -21,7 +21,7 @@ OPENCODE_DIR = ".opencode"
 PLAN_FILE = os.path.join(OPENCODE_DIR, "plan.md")
 BACKUP_FILE = os.path.join(OPENCODE_DIR, "plan.md.bak")
 GITIGNORE_FILE = os.path.join(OPENCODE_DIR, ".gitignore")
-GITIGNORE_ENTRIES = ("plan.md", "plan.md.bak")
+GITIGNORE_ENTRIES = ("plan.md", "plan.md.bak", ".gitignore")
 
 # Pattern matches lines like: "- [ ] 1. <step>" or "- [x] 2. <step> — note: note"
 STEP_PATTERN = re.compile(r"^-\s*\[([ x~!])\]\s*(\d+)\.\s*(.*?)$")
@@ -45,6 +45,20 @@ def _locked(func):
     return wrapper
 
 
+def _fsync_dir(dir_name: str) -> None:
+    """Best-effort fsync of a directory so a rename survives a power loss."""
+    try:
+        dir_fd = os.open(dir_name, os.O_RDONLY)
+    except OSError:
+        return
+    try:
+        os.fsync(dir_fd)
+    except OSError:
+        pass
+    finally:
+        os.close(dir_fd)
+
+
 def _atomic_write(filepath: str, content: str) -> None:
     """Atomically writes content to a file using a temporary file and os.replace."""
     dir_name = os.path.dirname(filepath) or "."
@@ -52,8 +66,11 @@ def _atomic_write(filepath: str, content: str) -> None:
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             f.write(content)
+            f.flush()
+            os.fsync(f.fileno())
         os.chmod(tmp_path, 0o644)
         os.replace(tmp_path, filepath)
+        _fsync_dir(dir_name)
     except Exception:
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
@@ -66,6 +83,27 @@ def _read_plan_lines() -> list[str]:
         return []
     with open(PLAN_FILE, encoding="utf-8") as f:
         return f.readlines()
+
+
+def _locate_step(lines: list[str], step_id: int) -> tuple[int, str, str] | None:
+    """Finds the plan line carrying ``step_id``.
+
+    Returns ``(line index, status, step text)``, or ``None`` when no line has
+    that id. A hand-edited plan may repeat an id; an active ``[~]`` duplicate
+    wins over a terminal one so the lock can still be released.
+    """
+    matches: list[tuple[int, str, str]] = []
+    for i, line in enumerate(lines):
+        match = STEP_PATTERN.match(line.strip())
+        if not match:
+            continue
+        status, raw_id, rest = match.groups()
+        if int(raw_id) == step_id:
+            matches.append((i, status, rest.strip()))
+    for candidate in matches:
+        if candidate[1] == "~":
+            return candidate
+    return matches[0] if matches else None
 
 
 def _ensure_gitignore() -> None:
@@ -99,6 +137,8 @@ def plan_create(steps: list[str]) -> str:
         A message reporting the number of created steps on success,
         or an error message on failure.
     """
+    if isinstance(steps, (str, bytes)):
+        return "Steps must be a list of strings"
     clean_steps = [_single_line(step) for step in steps]
     if not clean_steps:
         return "Step list cannot be empty"
@@ -113,7 +153,7 @@ def plan_create(steps: list[str]) -> str:
             content_src = f_src.read()
         _atomic_write(BACKUP_FILE, content_src)
 
-    project = os.path.basename(os.getcwd()) or "unknown"
+    project = _single_line(os.path.basename(os.getcwd())) or "unknown"
     ts = int(time.time())
     lines = [f"# Plan — {project}\n", f"- created: {ts}\n", "\n"]
     for idx, step in enumerate(clean_steps, start=1):
@@ -187,23 +227,13 @@ def plan_done(id: int, note: str) -> str:
         return "Note cannot be empty"
 
     lines = _read_plan_lines()
-    target_index = None
-    step_text = ""
-
-    for i, line in enumerate(lines):
-        match = STEP_PATTERN.match(line.strip())
-        if match:
-            status, step_id, rest = match.groups()
-            if int(step_id) == id:
-                if status == "~":
-                    target_index = i
-                    step_text = rest.strip()
-                    break
-                else:
-                    return f"id={id} is not the active step"
-
-    if target_index is None:
+    located = _locate_step(lines, id)
+    if located is None:
         return f"id={id} not found"
+
+    target_index, status, step_text = located
+    if status != "~":
+        return f"id={id} is not the active step"
 
     lines[target_index] = f"- [x] {id}. {step_text} — note: {note_text}\n"
     _atomic_write(PLAN_FILE, "".join(lines))
@@ -231,23 +261,13 @@ def plan_fail(id: int, reason: str) -> str:
         return "Reason cannot be empty"
 
     lines = _read_plan_lines()
-    target_index = None
-    step_text = ""
-
-    for i, line in enumerate(lines):
-        match = STEP_PATTERN.match(line.strip())
-        if match:
-            status, step_id, rest = match.groups()
-            if int(step_id) == id:
-                if status == "~":
-                    target_index = i
-                    step_text = rest.strip()
-                    break
-                else:
-                    return f"id={id} is not the active step"
-
-    if target_index is None:
+    located = _locate_step(lines, id)
+    if located is None:
         return f"id={id} not found"
+
+    target_index, status, step_text = located
+    if status != "~":
+        return f"id={id} is not the active step"
 
     lines[target_index] = f"- [!] {id}. {step_text} — error: {reason_text}\n"
     _atomic_write(PLAN_FILE, "".join(lines))
