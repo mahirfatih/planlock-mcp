@@ -18,10 +18,13 @@ mcp = FastMCP("planlock")
 __version__ = "1.0.0"
 
 OPENCODE_DIR = ".opencode"
-PLAN_FILE = os.path.join(OPENCODE_DIR, "plan.md")
-BACKUP_FILE = os.path.join(OPENCODE_DIR, "plan.md.bak")
 GITIGNORE_FILE = os.path.join(OPENCODE_DIR, ".gitignore")
 GITIGNORE_ENTRIES = ("plan.md", "plan.md.bak", ".gitignore")
+
+# A working directory that contains one of these is treated as a project root
+# and keeps its plan next to the code. Everything else falls back to
+# .opencode/plan.md, which keeps scratch directories tidy.
+PROJECT_MARKERS = (".git", "pyproject.toml", "package.json", "Cargo.toml", "go.mod")
 
 # Pattern matches lines like: "- [ ] 1. <step>" or "- [x] 2. <step> — note: note"
 STEP_PATTERN = re.compile(r"^-\s*\[([ x~!])\]\s*(\d+)\.\s*(.*?)$")
@@ -77,11 +80,28 @@ def _atomic_write(filepath: str, content: str) -> None:
         raise
 
 
-def _read_plan_lines() -> list[str]:
-    """Reads the raw lines of plan.md."""
-    if not os.path.exists(PLAN_FILE):
+def _plan_paths() -> tuple[str, str]:
+    """Returns the ``(plan, backup)`` paths for the current working directory.
+
+    A project root (a working directory containing a project marker) keeps the
+    plan at ``plan.md``, next to the code. Any other directory keeps it at
+    ``.opencode/plan.md``.
+    """
+    cwd = os.getcwd()
+    if any(os.path.exists(os.path.join(cwd, marker)) for marker in PROJECT_MARKERS):
+        return os.path.join(cwd, "plan.md"), os.path.join(cwd, "plan.md.bak")
+    opencode_dir = os.path.join(cwd, OPENCODE_DIR)
+    return (
+        os.path.join(opencode_dir, "plan.md"),
+        os.path.join(opencode_dir, "plan.md.bak"),
+    )
+
+
+def _read_plan_lines(plan_file: str) -> list[str]:
+    """Reads the raw lines of the active plan file."""
+    if not os.path.exists(plan_file):
         return []
-    with open(PLAN_FILE, encoding="utf-8") as f:
+    with open(plan_file, encoding="utf-8") as f:
         return f.readlines()
 
 
@@ -125,17 +145,41 @@ def _ensure_gitignore() -> None:
     _atomic_write(GITIGNORE_FILE, content)
 
 
+def _ensure_root_gitignore() -> None:
+    """Adds a root-level plan to .gitignore, creating the file when missing."""
+    gitignore_file = os.path.join(os.getcwd(), ".gitignore")
+    entries = ("plan.md", "plan.md.bak")
+    content = ""
+    if os.path.exists(gitignore_file):
+        with open(gitignore_file, encoding="utf-8") as f:
+            content = f.read()
+        existing = {line.strip() for line in content.splitlines()}
+        missing = [entry for entry in entries if entry not in existing]
+        if not missing:
+            return
+    else:
+        missing = list(entries)
+
+    if content and not content.endswith("\n"):
+        content += "\n"
+    content += "".join(entry + "\n" for entry in missing)
+    _atomic_write(gitignore_file, content)
+
+
 @mcp.tool()
 @_locked
 def plan_create(steps: list[str]) -> str:
-    """Create a new plan and write it to .opencode/plan.md.
+    """Create a new plan and write it to the active plan file.
+
+    The plan file is ``plan.md`` in a project root and ``.opencode/plan.md``
+    everywhere else; see ``_plan_paths`` for the rule.
 
     Args:
         steps: List of step descriptions to add to the plan.
 
     Returns:
-        A message reporting the number of created steps on success,
-        or an error message on failure.
+        A message reporting the number of created steps and the absolute path
+        of the plan file on success, or an error message on failure.
     """
     if isinstance(steps, (str, bytes)):
         return "Steps must be a list of strings"
@@ -145,13 +189,18 @@ def plan_create(steps: list[str]) -> str:
     if any(not step for step in clean_steps):
         return "Step text cannot be empty"
 
-    os.makedirs(OPENCODE_DIR, exist_ok=True)
-    _ensure_gitignore()
+    plan_file, backup_file = _plan_paths()
+    plan_dir = os.path.dirname(plan_file)
+    os.makedirs(plan_dir, exist_ok=True)
+    if plan_dir == os.getcwd():
+        _ensure_root_gitignore()
+    else:
+        _ensure_gitignore()
 
-    if os.path.exists(PLAN_FILE):
-        with open(PLAN_FILE, encoding="utf-8") as f_src:
+    if os.path.exists(plan_file):
+        with open(plan_file, encoding="utf-8") as f_src:
             content_src = f_src.read()
-        _atomic_write(BACKUP_FILE, content_src)
+        _atomic_write(backup_file, content_src)
 
     project = _single_line(os.path.basename(os.getcwd())) or "unknown"
     ts = int(time.time())
@@ -159,9 +208,12 @@ def plan_create(steps: list[str]) -> str:
     for idx, step in enumerate(clean_steps, start=1):
         lines.append(f"- [ ] {idx}. {step}\n")
 
-    _atomic_write(PLAN_FILE, "".join(lines))
+    _atomic_write(plan_file, "".join(lines))
     label = "step" if len(clean_steps) == 1 else "steps"
-    return f"Plan Lock created: {len(clean_steps)} {label}"
+    return (
+        f"Plan Lock created: {len(clean_steps)} {label} -> "
+        f"{os.path.abspath(plan_file)}"
+    )
 
 
 @mcp.tool()
@@ -170,13 +222,15 @@ def plan_next() -> str:
     """Activate the next pending plan step ([~]) and return it.
 
     Returns:
-        The ID and text of the next step; an error message if a lock is already
-        active or the plan file is missing; 'PLAN_DONE' when all steps are done.
+        The ID, absolute plan path and text of the next step; an error message
+        if a lock is already active or the plan file is missing; 'PLAN_DONE'
+        when all steps are done.
     """
-    if not os.path.exists(PLAN_FILE):
+    plan_file, _ = _plan_paths()
+    if not os.path.exists(plan_file):
         return "plan.md not found; call plan_create first"
 
-    lines = _read_plan_lines()
+    lines = _read_plan_lines(plan_file)
 
     active_id = None
     next_step_index = None
@@ -202,9 +256,12 @@ def plan_next() -> str:
         return "PLAN_DONE"
 
     lines[next_step_index] = f"- [~] {next_step_id}. {next_step_text}\n"
-    _atomic_write(PLAN_FILE, "".join(lines))
+    _atomic_write(plan_file, "".join(lines))
 
-    return f"Next step (id={next_step_id}): {next_step_text}"
+    return (
+        f"Next step (id={next_step_id}, file: {os.path.abspath(plan_file)}): "
+        f"{next_step_text}"
+    )
 
 
 @mcp.tool()
@@ -219,14 +276,15 @@ def plan_done(id: int, note: str) -> str:
     Returns:
         A success or error message.
     """
-    if not os.path.exists(PLAN_FILE):
+    plan_file, _ = _plan_paths()
+    if not os.path.exists(plan_file):
         return "plan.md not found; call plan_create first"
 
     note_text = _single_line(note)
     if not note_text:
         return "Note cannot be empty"
 
-    lines = _read_plan_lines()
+    lines = _read_plan_lines(plan_file)
     located = _locate_step(lines, id)
     if located is None:
         return f"id={id} not found"
@@ -236,7 +294,7 @@ def plan_done(id: int, note: str) -> str:
         return f"id={id} is not the active step"
 
     lines[target_index] = f"- [x] {id}. {step_text} — note: {note_text}\n"
-    _atomic_write(PLAN_FILE, "".join(lines))
+    _atomic_write(plan_file, "".join(lines))
 
     return f"Step {id} completed: {note_text}"
 
@@ -253,14 +311,15 @@ def plan_fail(id: int, reason: str) -> str:
     Returns:
         A success or error message.
     """
-    if not os.path.exists(PLAN_FILE):
+    plan_file, _ = _plan_paths()
+    if not os.path.exists(plan_file):
         return "plan.md not found; call plan_create first"
 
     reason_text = _single_line(reason)
     if not reason_text:
         return "Reason cannot be empty"
 
-    lines = _read_plan_lines()
+    lines = _read_plan_lines(plan_file)
     located = _locate_step(lines, id)
     if located is None:
         return f"id={id} not found"
@@ -270,7 +329,7 @@ def plan_fail(id: int, reason: str) -> str:
         return f"id={id} is not the active step"
 
     lines[target_index] = f"- [!] {id}. {step_text} — error: {reason_text}\n"
-    _atomic_write(PLAN_FILE, "".join(lines))
+    _atomic_write(plan_file, "".join(lines))
 
     return f"Step {id} failed: {reason_text}"
 

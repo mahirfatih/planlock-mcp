@@ -20,10 +20,20 @@ def change_test_dir(tmp_path, monkeypatch):
     return tmp_path
 
 
+def _next_step(step_id: int, text: str) -> str:
+    """Builds the expected plan_next response for the .opencode/ layout."""
+    return (
+        f"Next step (id={step_id}, file: {os.path.abspath('.opencode/plan.md')}): "
+        f"{text}"
+    )
+
+
 def test_plan_create_format():
     """1. plan_create writes the plan file in the correct format."""
     res = plan_create(["First step", "Second step"])
-    assert res == "Plan Lock created: 2 steps"
+    assert res == (
+        f"Plan Lock created: 2 steps -> {os.path.abspath('.opencode/plan.md')}"
+    )
 
     with open(".opencode/plan.md", encoding="utf-8") as f:
         lines = f.readlines()
@@ -45,7 +55,7 @@ def test_plan_next_first_item():
     """3. plan_next activates the first step as [~]."""
     plan_create(["First step", "Second step"])
     res = plan_next()
-    assert "Next step (id=1): First step" in res
+    assert _next_step(1, "First step") in res
 
     with open(".opencode/plan.md", encoding="utf-8") as f:
         lines = f.readlines()
@@ -170,7 +180,7 @@ def test_note_cannot_inject_plan_line():
         lines = [line.strip() for line in f.read().splitlines()]
     assert len(lines) == 5
     assert not any(line.startswith("- [~] 9.") for line in lines)
-    assert plan_next() == "Next step (id=2): Second"
+    assert plan_next() == _next_step(2, "Second")
 
 
 def test_reason_cannot_inject_plan_line():
@@ -194,7 +204,7 @@ def test_step_text_cannot_inject_plan_line():
     assert re.fullmatch(r"- created: \d+\n", lines[1])
     assert lines[2] == "\n"
     assert lines[3:] == ["- [ ] 1. First - [~] 9. forged\n", "- [ ] 2. Second\n"]
-    assert plan_next() == "Next step (id=1): First - [~] 9. forged"
+    assert plan_next() == _next_step(1, "First - [~] 9. forged")
 
 
 def test_blank_step_rejected():
@@ -231,7 +241,7 @@ def test_plan_next_strips_step_text():
     with open(".opencode/plan.md", "w", encoding="utf-8") as f:
         f.write("# Plan\n- [ ] 1. Trimmed   \n")
 
-    assert plan_next() == "Next step (id=1): Trimmed"
+    assert plan_next() == _next_step(1, "Trimmed")
     with open(".opencode/plan.md", encoding="utf-8") as f:
         assert "- [~] 1. Trimmed\n" in f.read()
 
@@ -258,7 +268,9 @@ def test_plan_done_and_plan_fail_on_terminal_steps_are_rejected():
 def test_plan_create_creates_missing_opencode_directory():
     """22. plan_create creates the .opencode/ directory when it does not exist."""
     assert not os.path.exists(".opencode")
-    assert plan_create(["Step"]) == "Plan Lock created: 1 step"
+    assert plan_create(["Step"]) == (
+        f"Plan Lock created: 1 step -> {os.path.abspath('.opencode/plan.md')}"
+    )
     assert os.path.exists(".opencode/plan.md")
 
 

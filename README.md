@@ -28,7 +28,8 @@ The result is slower and more chaotic work. Parallelism is often presented as a 
 The usual loop is:
 
 1. `plan_create(steps)` writes a fresh plan and backs up any previous one.
-2. `plan_next()` activates the first pending step and returns its id and text.
+2. `plan_next()` activates the first pending step and returns its id, the absolute plan path and its text:
+   `Next step (id=1, file: /home/user/projects/api/plan.md): Create database schema`.
 3. The model does only that step, then calls `plan_done(id, note)` or `plan_fail(id, reason)`.
 4. Repeat. `plan_next()` returns `PLAN_DONE` when no pending steps remain.
 
@@ -49,8 +50,8 @@ flowchart LR
 
 | Tool | Parameters | Behaviour |
 | :--- | :--- | :--- |
-| `plan_create` | `steps: list[str]` | Writes `.opencode/plan.md`, prepares `.opencode/.gitignore`, backs up an existing plan. |
-| `plan_next` | none | Activates the next `[ ]` step as `[~]`. Returns an error if a step is already `[~]`, or `PLAN_DONE` when finished. |
+| `plan_create` | `steps: list[str]` | Writes the plan file (root `plan.md` or `.opencode/plan.md`), prepares the ignore rules, backs up an existing plan, and returns the absolute path. |
+| `plan_next` | none | Activates the next `[ ]` step as `[~]` and returns `id`, the absolute plan path and the step text. Returns an error if a step is already `[~]`, or `PLAN_DONE` when finished. |
 | `plan_done` | `id: int, note: str` | Marks the active `[~]` step as `[x]` and appends the note. |
 | `plan_fail` | `id: int, reason: str` | Marks the active `[~]` step as `[!]` and appends the reason. |
 
@@ -58,7 +59,15 @@ A step cannot be started twice: the server checks the active lock before activat
 
 ## Plan file
 
-The plan is stored at `.opencode/plan.md`, relative to the current working directory. There is no hardcoded path and nothing is written to the home directory, so each project keeps its own independent plan.
+The plan sits next to the code when the working directory looks like a project root: it contains `.git`, `pyproject.toml`, `package.json`, `Cargo.toml` or `go.mod`, so the file is `<cwd>/plan.md`. Any other directory — a scratch folder, a home directory — keeps it at `<cwd>/.opencode/plan.md`, where a loose markdown file is less intrusive. Both paths are relative to the server's working directory and nothing is written to the home directory, so each project keeps its own independent plan.
+
+`plan_create` reports the absolute path it wrote:
+
+```text
+Plan Lock created: 3 steps -> /home/user/projects/api/plan.md
+```
+
+so the model always knows which file is the source of truth without searching for it.
 
 ```markdown
 # Plan — myproject
@@ -79,11 +88,11 @@ The header records the project name (basename of the working directory) and the 
 | `[x]` | Completed, with a `— note:` suffix. Terminal. |
 | `[!]` | Failed, with a `— error:` suffix. Terminal. |
 
-`plan_create` also creates or updates `.opencode/.gitignore` with `plan.md`, `plan.md.bak` and `.gitignore` itself, so neither the plan nor its backup is committed and a generated `.opencode/` never shows up as untracked. When a new plan replaces an old one, the old content is written to `.opencode/plan.md.bak` first.
+`plan_create` also keeps the plan out of version control. A root-level plan is added to the working directory's `.gitignore`, which is created when missing; existing lines are preserved and entries are never duplicated. The `.opencode/` fallback gets its own `.opencode/.gitignore` with `plan.md`, `plan.md.bak` and `.gitignore` itself. Either way the plan and its backup never show up as untracked. When a new plan replaces an old one, the old content is written to the backup file next to it first.
 
 ## 🏗️ Architecture
 
-Plan Lock MCP is a thin enforcement layer around one markdown file. The model carries no plan state in memory: every tool call re-reads `.opencode/plan.md`, validates the requested transition, and writes the whole file back atomically. The file is the source of truth; the server is the referee.
+Plan Lock MCP is a thin enforcement layer around one markdown file. The model carries no plan state in memory: every tool call re-reads the active plan file, validates the requested transition, and writes the whole file back atomically. The file is the source of truth; the server is the referee.
 
 ```mermaid
 flowchart LR
@@ -96,7 +105,7 @@ flowchart LR
     Agent -->|"one tool call at a time"| Guard{"Guard checks:<br/>lock free? id valid?<br/>status = [~]?"}:::decision
     Guard -->|"no"| Reject["Error response<br/>plan unchanged"]:::decision
     Guard -->|"yes"| Write["_single_line + atomic write<br/>(RLock held throughout)"]:::action
-    Write --> Plan[(".opencode/plan.md<br/>single source of truth")]:::disk
+    Write --> Plan[("active plan file<br/>cwd/plan.md or .opencode/plan.md")]:::disk
     Plan -->|"re-read on every call"| Guard
     Plan -->|"step id + text / confirmation"| Agent
     Reject --> Agent
@@ -150,7 +159,7 @@ Register the server with the MCP client (for example `opencode.json`):
 }
 ```
 
-The `cwd` matters: it decides which project's `.opencode/plan.md` the server reads.
+The `cwd` matters: it decides which project the server belongs to, and whether the plan sits at the project root or under `.opencode/`.
 
 Add this directive to the agent's system prompt:
 
@@ -160,7 +169,7 @@ Before starting a coding task, call plan_create.
 Before each step, call plan_next and work only on the step it returns.
 When the step finishes, call plan_done, or plan_fail if it failed.
 Do not call other tools while a step is active.
-If in doubt, read .opencode/plan.md to see the current state.
+If in doubt, read the plan file at the path plan_create reported.
 ```
 
 The prompt is a reminder, not the enforcement. The lock itself is in the server.
@@ -172,10 +181,10 @@ The prompt is a reminder, not the enforcement. The lock itself is in the server.
 - **`_single_line`** collapses whitespace in step text, notes, and reasons. A newline in a tool argument cannot inject a forged `- [~]` line and bypass the lock.
 - **No in-memory plan state.** Every call re-reads the file, which keeps restarts simple and makes the on-disk plan the single source of truth.
 - **Clean stdio.** Nothing is printed to `stdout`; diagnostics do not corrupt the MCP transport.
-- The suite has 57 deterministic tests, all offline. Run `./test/test.sh` for Ruff and pytest.
+- The suite has 62 deterministic tests, all offline. Run `./test/test.sh` for Ruff and pytest.
 
 ## Limitations
 
-The prompt does not make the model perfectly disciplined. It can still decide to skip the plan, work on a later step, or forget to release a lock. The MCP checks make this visible rather than silent: an out-of-order step is rejected instead of quietly corrupting the plan. Recovery is manual but cheap — read `.opencode/plan.md`, see the `[~]` step, and either finish it with `plan_done` or record the failure with `plan_fail`.
+The prompt does not make the model perfectly disciplined. It can still decide to skip the plan, work on a later step, or forget to release a lock. The MCP checks make this visible rather than silent: an out-of-order step is rejected instead of quietly corrupting the plan. Recovery is manual but cheap — read the plan file at the path `plan_create` returned, see the `[~]` step, and either finish it with `plan_done` or record the failure with `plan_fail`.
 
 The lock is per server process. Two independent server processes pointed at the same working directory are not serialized against each other. There is also no validation of a plan file that was edited by hand into an invalid shape, such as more than one `[~]` step or ids that skip numbers; `plan_create` always writes a well-formed plan, but hand-edited files can confuse the parser. A duplicated id is tolerated: `plan_done` and `plan_fail` prefer the active line, so the lock can still be released.

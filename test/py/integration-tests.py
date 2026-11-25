@@ -20,11 +20,21 @@ def change_test_dir(tmp_path, monkeypatch):
     return tmp_path
 
 
+def _next_step(step_id: int, text: str) -> str:
+    """Builds the expected plan_next response for the .opencode/ layout."""
+    return (
+        f"Next step (id={step_id}, file: {os.path.abspath('.opencode/plan.md')}): "
+        f"{text}"
+    )
+
+
 def test_full_plan_lifecycle_with_disk_verification():
     """Verify state transitions directly on disk across the entire lifecycle."""
     # 1. Create plan
     res_create = plan_create(["Task 1", "Task 2", "Task 3"])
-    assert "Plan Lock created: 3 steps" == res_create
+    assert res_create == (
+        f"Plan Lock created: 3 steps -> {os.path.abspath('.opencode/plan.md')}"
+    )
     assert os.path.exists(".opencode/plan.md")
     assert os.path.exists(".opencode/.gitignore")
 
@@ -36,21 +46,21 @@ def test_full_plan_lifecycle_with_disk_verification():
 
     # 2. Step 1: Activate & Complete
     res_next1 = plan_next()
-    assert "Next step (id=1): Task 1" in res_next1
+    assert _next_step(1, "Task 1") in res_next1
 
     res_done1 = plan_done(1, "Task 1 finished cleanly")
     assert "Step 1 completed: Task 1 finished cleanly" in res_done1
 
     # 3. Step 2: Activate & Fail
     res_next2 = plan_next()
-    assert "Next step (id=2): Task 2" in res_next2
+    assert _next_step(2, "Task 2") in res_next2
 
     res_fail2 = plan_fail(2, "Task 2 network timeout")
     assert "Step 2 failed: Task 2 network timeout" in res_fail2
 
     # 4. Step 3: Activate & Complete
     res_next3 = plan_next()
-    assert "Next step (id=3): Task 3" in res_next3
+    assert _next_step(3, "Task 3") in res_next3
 
     res_done3 = plan_done(3, "Task 3 done")
     assert "Step 3 completed: Task 3 done" in res_done3
@@ -90,7 +100,7 @@ def test_crash_recovery_resumes_from_locked_step():
 
     # Now step 2 can be started
     next_step = plan_next()
-    assert "Next step (id=2): Step B" in next_step
+    assert _next_step(2, "Step B") in next_step
 
 
 def test_backup_rotation_preserves_previous_plan():

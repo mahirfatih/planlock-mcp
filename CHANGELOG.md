@@ -49,6 +49,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The plan now lives at `<cwd>/plan.md` when the working directory contains a
+  project marker (`.git`, `pyproject.toml`, `package.json`, `Cargo.toml`, or
+  `go.mod`). Other directories keep using `<cwd>/.opencode/plan.md`.
+- `plan_create` appends `plan.md` and `plan.md.bak` to the working directory
+  `.gitignore`, creating the file when it is missing. The `.opencode/` layout
+  keeps using `.opencode/.gitignore`.
+- `plan_create` now returns the absolute path of the plan file, for example
+  `Plan Lock created: 2 steps -> /home/user/project/plan.md`, so the model
+  never has to search for the active file.
+- `plan_next` also reports that path in its response:
+  `Next step (id=1, file: /home/user/project/plan.md): <text>`.
 - `_atomic_write` now sets mode `0o644` on the published file; previously the
   restrictive `mkstemp` default (`0o600`) was inherited.
 - Replaced Turkish test fixtures in `regression-tests.py` with French/German

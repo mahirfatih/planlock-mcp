@@ -1,6 +1,6 @@
 # Testing
 
-The suite has 57 deterministic cases and needs no network access. Every test
+The suite has 62 deterministic cases and needs no network access. Every test
 file lives under `test/py/`.
 
 ## Running the suite
@@ -33,10 +33,10 @@ python3 -m pytest -q                      # when the .venv already has the deps
 | Path | Purpose |
 | :--- | :--- |
 | [`test.sh`](../../test/test.sh) | Runner: install (or `uv`), Ruff, then pytest. |
-| [`py/test_planlock.py`](../../test/py/test_planlock.py) | 14 core tests: format, empty/blank steps, activation, lock, done/fail, completion, gitignore entries, duplicates and plan header. |
+| [`py/test_planlock.py`](../../test/py/test_planlock.py) | 18 core tests: format, empty/blank steps, activation, lock, done/fail, completion, gitignore entries, duplicates, plan header, and both plan locations. |
 | [`py/planlock-tests.py`](../../test/py/planlock-tests.py) | 23 extended unit tests: backup, injection safety, concurrency, id messages, empty plan, terminal steps, atomic-write mode. |
 | [`py/integration-tests.py`](../../test/py/integration-tests.py) | 4 integration tests: full lifecycle disk audit, crash recovery, backup rotation, atomic write cleanup. |
-| [`py/regression-tests.py`](../../test/py/regression-tests.py) | 10 regression tests: CRLF/tab injection, UTF-8/emojis, heavy concurrency, foreign plan lines, empty inputs, project-name injection, non-list steps, duplicate ids, fsync ordering, generated `.opencode/` staying out of `git status`. |
+| [`py/regression-tests.py`](../../test/py/regression-tests.py) | 11 regression tests: CRLF/tab injection, UTF-8/emojis, heavy concurrency, foreign plan lines, empty inputs, project-name injection, non-list steps, duplicate ids, fsync ordering, root plan ignored via `.gitignore`, and preserved `.gitignore` content. |
 | [`py/smoke-sanity-tests.py`](../../test/py/smoke-sanity-tests.py) | 5 smoke & sanity tests: tool registration, golden path, missing plan, invalid IDs, `--version`. |
 | [`py/planlock-mcp-tests.py`](../../test/py/planlock-mcp-tests.py) | End-to-end test over the real stdio transport: handshake, `tools/list`, two `tools/call`. |
 
@@ -51,16 +51,16 @@ the repository.
 
 | Area | Cases |
 | :--- | :--- |
-| Plan creation | format, empty list, blank step rejection, non-list rejection, project/timestamp header, missing `.opencode/` directory |
+| Plan creation | format, empty list, blank step rejection, non-list rejection, project/timestamp header, missing `.opencode/` directory, root vs. `.opencode/` location, absolute path in the response |
 | Lock enforcement | first activation, active lock, concurrent activation |
 | Lifecycle | `[~]` → `[x]` with note, `[~]` → `[!]` with reason, `PLAN_DONE`, terminal-step rejection, duplicate-id recovery |
-| Gitignore | creation, no duplicates, preserved content, backup entry, self-ignore |
+| Gitignore | creation, no duplicates, preserved content, backup entry, self-ignore, root `.gitignore` created when missing |
 | Backup | old plan written to `plan.md.bak` on recreate |
 | Injection safety | newline in step text, note, failure reason, and working-directory name |
 | Durability | fsync of the temp file before `os.replace`, `0o644` published mode, no leftover temp files |
 | MCP transport | stdio handshake, tool listing, `plan_create` + `plan_next` calls |
 | Integration | full lifecycle on disk, crash recovery, backup rotation, atomic write cleanup |
-| Regression | CRLF/tab injection, UTF-8/emojis, heavy concurrency, malformed lines, empty inputs, generated `.opencode/` staying out of `git status` |
+| Regression | CRLF/tab injection, UTF-8/emojis, heavy concurrency, malformed lines, empty inputs, root plan ignored via `.gitignore` |
 | Smoke & sanity | tool registration, golden path, missing plan, invalid IDs, `--version` |
 
 ## Adding a test

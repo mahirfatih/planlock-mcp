@@ -32,7 +32,9 @@ bildirmelidir (`plan_fail`). Kilit serbest bırakıldıktan sonra sıradaki adı
 ## ⚙️ Nasıl çalışır?
 
 1. `plan_create(steps)` yeni bir plan yazar, varsa eskisini yedekler.
-2. `plan_next()` sıradaki bekleyen maddeyi `[~]` yapar ve id'siyle metnini döner.
+2. `plan_next()` sıradaki bekleyen maddeyi `[~]` yapar ve id'sini, plan dosyasının
+   tam yolunu ve metnini döner:
+   `Next step (id=1, file: /home/user/projeler/api/plan.md): Veritabanı şemasını oluştur`.
 3. Model **yalnızca o adımı** yapar, ardından `plan_done(id, note)` ya da
    `plan_fail(id, reason)` çağırır.
 4. Tekrar edilir. Bekleyen madde kalmazsa `plan_next()` → `PLAN_DONE`.
@@ -56,12 +58,21 @@ flowchart LR
 
 ## 📂 Dosya ve yol yapısı
 
-- Plan dosyası çalışma dizinine göre **`.opencode/plan.md`** konumundadır;
-  sabit yol yoktur, ev dizinine yazılmaz. Her proje kendi planını tutar.
-- Yeni plan oluşturulurken mevcut plan `.opencode/plan.md.bak` olarak yedeklenir.
-- `.opencode/.gitignore` otomatik olarak `plan.md`, `plan.md.bak` ve `.gitignore`
-  girdileriyle güncellenir; kök `.gitignore` değiştirilmez. Böylece üretilen
-  `.opencode/` dizini `git status` çıktısında görünmez.
+- Plan dosyası, çalışma dizini bir proje köküne benziyorsa (`.git`,
+  `pyproject.toml`, `package.json`, `Cargo.toml` veya `go.mod` içeriyorsa)
+  **`<cwd>/plan.md`** olarak kodun yanında tutulur. Diğer dizinlerde (geçici
+  klasör, ev dizini) **`<cwd>/.opencode/plan.md`** kullanılır. Sabit yol yoktur,
+  ev dizinine yazılmaz; her proje kendi planını tutar.
+- `plan_create`, yazdığı dosyanın tam yolunu döner:
+  `Plan Lock created: 3 steps -> /home/user/projeler/api/plan.md`. Böylece model
+  hangi dosyanın doğruluk kaynağı olduğunu aramadan bilir.
+- Yeni plan oluşturulurken mevcut plan, plan dosyasının yanındaki `.bak` dosyasına
+  yedeklenir.
+- Kök planda `plan.md` ve `plan.md.bak`, çalışma dizinindeki `.gitignore` dosyasına
+  eklenir; dosya yoksa önce oluşturulur. Mevcut satırlar korunur, aynı girdi
+  tekrar eklenmez. `.opencode/` düzeninde ise `.opencode/.gitignore` otomatik
+  olarak `plan.md`, `plan.md.bak` ve `.gitignore` girdileriyle güncellenir. Her
+  iki durumda da plan ve yedeği `git status` çıktısında görünmez.
 - Tüm yazımlar atomic'tir (`tempfile.mkstemp` + `os.replace`).
 - Durum değişiklikleri `_STATE_LOCK` ile serileştirilir; eşzamanlı çağrılar aynı
   adımı açamaz.
@@ -97,7 +108,7 @@ Başlık, proje adını (çalışma dizininin adı) ve oluşturma zamanını uni
 ## 🏗️ Mimari
 
 Plan Lock MCP, tek bir markdown dosyası etrafında çalışan ince bir zorlama katmanıdır.
-Model planda durum tutmaz: her araç çağrısı `.opencode/plan.md` dosyasını yeniden
+Model planda durum tutmaz: her araç çağrısı aktif plan dosyasını yeniden
 okur, istenen geçişi doğrular ve dosyanın tamamını atomik olarak yazar. Dosya
 tek doğruluk kaynağı, sunucu ise hakemdir.
 
@@ -112,7 +123,7 @@ flowchart LR
     Agent -->|"tek seferde bir araç çağrısı"| Guard{"Kontrol:<br/>kilit boş mu? id geçerli mi?<br/>durum [~] mi?"}:::decision
     Guard -->|"hayır"| Reject["Hata yanıtı<br/>plan değişmez"]:::decision
     Guard -->|"evet"| Write["_single_line + atomik yazma<br/>(RLock kilitli)"]:::action
-    Write --> Plan[(".opencode/plan.md<br/>tek doğruluk kaynağı")]:::disk
+    Write --> Plan[("aktif plan dosyası<br/>cwd/plan.md veya .opencode/plan.md")]:::disk
     Plan -->|"her çağrıda yeniden okunur"| Guard
     Plan -->|"adım id + metin / onay"| Agent
     Reject --> Agent
@@ -151,8 +162,8 @@ sıfırlar ve önceki dosyayı yedekler.
 
 | Araç | Parametreler | Açıklama |
 | :--- | :--- | :--- |
-| `plan_create` | `steps: list[str]` | Yeni planı yazar, gitignore'u ayarlar, eski planı yedekler. |
-| `plan_next` | *(yok)* | Sıradaki `[ ]` maddesini `[~]` yapar. Kilit varsa hata, plan biterse `PLAN_DONE` döner. |
+| `plan_create` | `steps: list[str]` | Plan dosyasını yazar (kök `plan.md` veya `.opencode/plan.md`), ignore kurallarını hazırlar, eski planı yedekler ve dosyanın tam yolunu döner. |
+| `plan_next` | *(yok)* | Sıradaki `[ ]` maddesini `[~]` yapar; id'yi, plan dosyasının tam yolunu ve metni döner. Kilit varsa hata, plan biterse `PLAN_DONE` döner. |
 | `plan_done` | `id: int, note: str` | Aktif maddeyi `[x]` yapar ve not ekler. |
 | `plan_fail` | `id: int, reason: str` | Aktif maddeyi `[!]` yapar ve sebep ekler. |
 

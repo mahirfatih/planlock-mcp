@@ -50,6 +50,7 @@ def test_plan_next_activates_first_step():
     result = plan_next()
     assert "id=1" in result
     assert "First step" in result
+    assert f"file: {os.path.abspath('.opencode/plan.md')}" in result
 
     with open(".opencode/plan.md", encoding="utf-8") as f:
         lines = f.readlines()
@@ -160,3 +161,52 @@ def test_plan_header_uses_working_directory_basename():
     with open(".opencode/plan.md", encoding="utf-8") as f:
         header = f.readline().strip()
     assert header == f"# Plan — {os.path.basename(os.getcwd())}"
+
+
+def test_plan_create_uses_project_root_when_marker_exists(tmp_path):
+    """15. A project marker moves the plan to the working directory root."""
+    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
+
+    plan_create(["First step"])
+
+    assert (tmp_path / "plan.md").exists()
+    assert not (tmp_path / ".opencode").exists()
+    lines = (tmp_path / ".gitignore").read_text(encoding="utf-8").splitlines()
+    assert "plan.md" in lines
+    assert "plan.md.bak" in lines
+
+
+def test_plan_create_falls_back_to_opencode_dir(tmp_path):
+    """16. A directory without project markers keeps the plan in .opencode/."""
+    (tmp_path / "notes.txt").write_text("scratch\n", encoding="utf-8")
+
+    plan_create(["First step"])
+
+    assert (tmp_path / ".opencode" / "plan.md").exists()
+    assert not (tmp_path / "plan.md").exists()
+
+
+def test_plan_create_returns_absolute_plan_path(tmp_path):
+    """17. plan_create reports the absolute path of the active plan file."""
+    (tmp_path / "package.json").write_text("{}", encoding="utf-8")
+
+    result = plan_create(["First step"])
+
+    assert result == f"Plan Lock created: 1 step -> {tmp_path / 'plan.md'}"
+
+
+def test_plan_lifecycle_uses_project_root_plan(tmp_path):
+    """18. plan_next, plan_done and the backup follow the root plan file."""
+    (tmp_path / ".git").mkdir()
+    plan_create(["First step"])
+    plan_create(["Second step"])
+
+    assert plan_next() == (
+        f"Next step (id=1, file: {tmp_path / 'plan.md'}): Second step"
+    )
+    assert plan_done(1, "done") == "Step 1 completed: done"
+
+    plan_text = (tmp_path / "plan.md").read_text(encoding="utf-8")
+    assert "- [x] 1. Second step — note: done" in plan_text
+    backup_text = (tmp_path / "plan.md.bak").read_text(encoding="utf-8")
+    assert "- [ ] 1. First step" in backup_text

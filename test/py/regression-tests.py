@@ -28,6 +28,14 @@ def change_test_dir(tmp_path, monkeypatch):
     return tmp_path
 
 
+def _next_step(step_id: int, text: str) -> str:
+    """Builds the expected plan_next response for the .opencode/ layout."""
+    return (
+        f"Next step (id={step_id}, file: {os.path.abspath('.opencode/plan.md')}): "
+        f"{text}"
+    )
+
+
 def test_regression_crlf_and_tabs_sanitization():
     """Regression: CRLF (\r\n) and special characters do not break the step parsing."""
     plan_create(["Step\r\nwith\r\nwindows\tnewlines"])
@@ -89,7 +97,7 @@ def test_regression_corrupted_plan_lines_handling():
         f.write("# Foreign Document\nRandom text that is not a step\n- [ ] 1. Real step\n")
 
     res = plan_next()
-    assert res == "Next step (id=1): Real step"
+    assert res == _next_step(1, "Real step")
 
 
 def test_regression_empty_note_or_reason():
@@ -113,7 +121,7 @@ def test_regression_project_name_cannot_inject_step(tmp_path, monkeypatch):
 
     assert lines[0] == "# Plan — evil - [~] 9. forged\n"
     assert "- [~] 9. forged\n" not in lines
-    assert plan_next() == "Next step (id=1): Real step"
+    assert plan_next() == _next_step(1, "Real step")
 
 
 def test_regression_steps_must_be_a_list():
@@ -144,11 +152,16 @@ def test_regression_atomic_write_fsyncs_before_replace(monkeypatch):
 
 
 @pytest.mark.skipif(shutil.which("git") is None, reason="git is not installed")
-def test_regression_generated_opencode_dir_stays_out_of_git_status(tmp_path):
-    """Regression: the generated .opencode/ does not show up as untracked."""
+def test_regression_root_plan_stays_out_of_git_status(tmp_path):
+    """Regression: a project-root plan is ignored through a created .gitignore."""
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True, capture_output=True)
 
     plan_create(["Step"])
+
+    assert (tmp_path / "plan.md").exists()
+    gitignore = (tmp_path / ".gitignore").read_text(encoding="utf-8")
+    assert "plan.md" in gitignore.splitlines()
+    assert "plan.md.bak" in gitignore.splitlines()
 
     result = subprocess.run(
         ["git", "status", "--porcelain"],
@@ -157,4 +170,18 @@ def test_regression_generated_opencode_dir_stays_out_of_git_status(tmp_path):
         capture_output=True,
         text=True,
     )
-    assert result.stdout == ""
+    assert "plan.md" not in result.stdout
+
+
+def test_regression_root_gitignore_preserves_existing_content(tmp_path):
+    """Regression: a pre-existing root .gitignore keeps its lines and gets no duplicates."""
+    (tmp_path / ".gitignore").write_text("node_modules/\nplan.md\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text("", encoding="utf-8")
+
+    plan_create(["First step"])
+    plan_create(["Second step"])
+
+    lines = (tmp_path / ".gitignore").read_text(encoding="utf-8").splitlines()
+    assert "node_modules/" in lines
+    assert lines.count("plan.md") == 1
+    assert lines.count("plan.md.bak") == 1

@@ -4,6 +4,8 @@ Fast, critical path sanity checks to verify the system works in its most basic
 and critical workflows. Designed to execute in sub-seconds before deeper testing.
 """
 
+import os
+
 import pytest
 
 from planlock import mcp, plan_create, plan_done, plan_fail, plan_next
@@ -13,6 +15,14 @@ from planlock import mcp, plan_create, plan_done, plan_fail, plan_next
 def change_test_dir(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     return tmp_path
+
+
+def _next_step(step_id: int, text: str) -> str:
+    """Builds the expected plan_next response for the .opencode/ layout."""
+    return (
+        f"Next step (id={step_id}, file: {os.path.abspath('.opencode/plan.md')}): "
+        f"{text}"
+    )
 
 
 def test_smoke_server_instance_and_tool_registration():
@@ -27,9 +37,11 @@ def test_smoke_server_instance_and_tool_registration():
 def test_smoke_golden_path_execution():
     """Smoke: Execute the primary happy path end-to-end in minimal steps."""
     # 1. Create 1 step
-    assert plan_create(["Quick smoke task"]) == "Plan Lock created: 1 step"
+    assert plan_create(["Quick smoke task"]) == (
+        f"Plan Lock created: 1 step -> {os.path.abspath('.opencode/plan.md')}"
+    )
     # 2. Next
-    assert plan_next() == "Next step (id=1): Quick smoke task"
+    assert plan_next() == _next_step(1, "Quick smoke task")
     # 3. Done
     assert plan_done(1, "verified") == "Step 1 completed: verified"
     # 4. Final

@@ -98,7 +98,9 @@ def test_stdio_handshake_lists_tools_and_runs_a_plan(tmp_path: Path) -> None:
             "tools/call",
             {"name": "plan_create", "arguments": {"steps": ["Alpha"]}},
         )
-        assert _text(created) == "Plan Lock created: 1 step"
+        assert _text(created) == (
+            f"Plan Lock created: 1 step -> {tmp_path / '.opencode' / 'plan.md'}"
+        )
 
         activated = _request(proc, 4, "tools/call", {"name": "plan_next", "arguments": {}})
         assert "Alpha" in _text(activated)
