@@ -215,6 +215,40 @@ The prompt is a reminder, not the enforcement. The lock itself is in the server.
 
 ---
 
+## 📁 Project structure
+
+```text
+planlock-mcp/
+├── planlock.py                  # MCP server: the four tools and the file lock
+├── pyproject.toml               # Package metadata, entry point, dependencies
+├── py.typed                     # PEP 561 marker for type checkers
+├── pytest.ini                   # Collects test_*.py and *-tests.py
+├── .ruff.toml                   # Lint configuration
+├── .pre-commit-config.yaml      # Local hook configuration
+├── requirements.txt             # Runtime dependency (mcp)
+├── requirements-dev.txt         # Test and lint dependencies
+├── README.md                    # English tour
+├── README.tr.md                 # Turkish tour
+├── CHANGELOG.md                 # Release history
+├── CONTRIBUTING.md              # Development conventions
+├── SECURITY.md                  # Vulnerability reporting policy
+├── LICENSE                      # MIT license
+├── .github/workflows/ci.yml     # Lint and test on push and pull request
+├── docs/
+│   ├── README.md                # Documentation index
+│   ├── guides/RELEASING.md      # Version bump and publish procedure
+│   └── testing/TESTING.md       # Suite map and runner flags
+├── examples/plan.md             # A real completed plan in server format
+└── test/
+    ├── test.sh                  # Runner: Ruff + pytest
+    ├── README.md                # Test folder guide
+    └── py/                      # Six test files, 62 cases
+```
+
+Generated and local state (`.venv/`, caches, `dist/`, `uv.lock`, `.wrongstack/`) is gitignored and left out of the tree.
+
+---
+
 ## 🧱 Design notes
 
 - **`threading.RLock` with a decorator** serializes each read-check-write cycle inside one server process, so two simultaneous tool calls cannot both see an unlocked plan and activate the same step.

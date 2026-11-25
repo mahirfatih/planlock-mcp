@@ -256,6 +256,40 @@ Prompt yalnızca hatırlatmadır; kilidi sunucu uygular.
 
 ---
 
+## 📁 Proje yapısı
+
+```text
+planlock-mcp/
+├── planlock.py                  # MCP sunucusu: dört araç ve dosya kilidi
+├── pyproject.toml               # Paket bilgisi, giriş noktası, bağımlılıklar
+├── py.typed                     # Tip denetleyiciler için PEP 561 işareti
+├── pytest.ini                   # test_*.py ve *-tests.py dosyalarını toplar
+├── .ruff.toml                   # Lint yapılandırması
+├── .pre-commit-config.yaml      # Yerel hook yapılandırması
+├── requirements.txt             # Çalışma zamanı bağımlılığı (mcp)
+├── requirements-dev.txt         # Test ve lint bağımlılıkları
+├── README.md                    # İngilizce tanıtım
+├── README.tr.md                 # Türkçe tanıtım
+├── CHANGELOG.md                 # Sürüm geçmişi
+├── CONTRIBUTING.md              # Geliştirme kuralları
+├── SECURITY.md                  # Güvenlik açığı bildirme politikası
+├── LICENSE                      # MIT lisansı
+├── .github/workflows/ci.yml     # Push ve PR'da lint + test
+├── docs/
+│   ├── README.md                # Belge dizini
+│   ├── guides/RELEASING.md      # Sürüm artırma ve yayınlama
+│   └── testing/TESTING.md       # Test haritası ve runner bayrakları
+├── examples/plan.md             # Sunucu formatında gerçek, tamamlanmış plan
+└── test/
+    ├── test.sh                  # Runner: Ruff + pytest
+    ├── README.md                # Test klasörü rehberi
+    └── py/                      # Altı test dosyası, 62 durum
+```
+
+Üretilen ve yerel durum (`.venv/`, cache'ler, `dist/`, `uv.lock`, `.wrongstack/`) gitignore'da olduğu için ağaca dahil edilmedi.
+
+---
+
 ## 🧱 Tasarım notları
 
 - **`threading.RLock` dekoratörü**, aynı sunucu sürecinde okuma-kontrol-yazma

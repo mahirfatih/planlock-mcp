@@ -55,6 +55,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Added a `📁 Project structure` tree to both READMEs, covering the server,
+  packaging, test suite, docs and the example plan; generated state is listed as
+  intentionally excluded.
 - Restructured `README.md` and `README.tr.md` with icon-prefixed hierarchical
   sections, separators, callouts and summary tables, following the documentation
   style of `net-traffic-control-ios`. All Mermaid diagrams, tool response strings
