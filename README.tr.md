@@ -22,6 +22,15 @@ anda yapma ya da doğrulama adımlarını atlama eğilimindedir. Bu durum hata
 teşhisini zorlaştırır, model odağını zayıflatır ve dosyalar arasında bozuk
 ara durumlar bırakır.
 
+**Sorunun adı:** Aynı turda birden fazla araç çağrısı üretmenin teknik adı
+**parallel tool calling**'dir. Buradaki mesele paralellik değil, çağrılar arasında
+bağımlılık sırası olmamasıdır: buna **koordinesiz fan-out** (*tool call flooding*
+veya *over-eager tool use*) diyoruz. Aynı turda birden fazla dosya düzenlenirse
+bu *fan-out editing* ya da *scattergun editing* olur — her yere aynı anda sıkılır,
+sıra yoktur. Sonuç **context thrashing** (*state thrashing*) olur: çıktılar iç
+içe girer, state sürekli değişir ve oturmaz; context ilerleme yerine muhasebeyle
+dolar. Plan Lock bu fan-out'u tek ve açık bir geçişle değiştirir.
+
 **Çözüm:** Bir madde aktif (`[~]`) iken **başka hiçbir madde başlatılamaz**. Ajan
 maddeyi ya temiz biçimde tamamlamalı (`plan_done`) ya da başarısızlığı
 bildirmelidir (`plan_fail`). Kilit serbest bırakıldıktan sonra sıradaki adım
@@ -95,6 +104,10 @@ flowchart LR
 ```
 
 Başlık, proje adını (çalışma dizininin adı) ve oluşturma zamanını unix timestamp olarak kaydeder.
+
+Gerçek bir örnek, macOS projesi `media-studio`'nun tamamlanmış planı:
+[`examples/plan.md`](./examples/plan.md). Altı adımın hepsi çözülmüş ve her birinde
+not var; o projede 441 test geçmiş, build temiz.
 
 | Sembol | Durum | Açıklama |
 | :---: | :--- | :--- |

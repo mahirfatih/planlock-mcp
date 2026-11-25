@@ -17,6 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `.opencode/` directory, and atomic writes publish `plan.md` with mode `0o644`.
 - Added `SECURITY.md` with the vulnerability reporting policy: private channel
   via the GitHub Security tab, response timelines, and in-scope/out-of-scope items.
+- Added `examples/plan.md`: a real, completed plan from the `media-studio`
+  3-column layout work, normalized to the exact format `plan_create` writes.
+  Linked from `README.md`, `README.tr.md` and `docs/README.md`.
+- Named the motivating failure mode in both READMEs: parallel tool calling,
+  uncoordinated fan-out / tool call flooding, fan-out or scattergun editing,
+  and the resulting context or state thrashing.
 - Added badge lines (Python, MCP-stdio, License) at the top of `README.md` and
   `README.tr.md`, adapted from `omlx-prompt-shrink/README.md` (no PyPI badge:
   `planlock-mcp` is not published there).

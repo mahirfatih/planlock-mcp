@@ -19,6 +19,8 @@ Everything in `docs/` is written in **English**. The Turkish quick tour is
 
 - [`../README.md`](../README.md) — install, the four tools and the plan format.
 - [`../README.tr.md`](../README.tr.md) — the same tour in Turkish.
+- [`../examples/plan.md`](../examples/plan.md) — a real completed plan in the
+  exact format the server writes.
 
 ## Guides — how do I work on it
 

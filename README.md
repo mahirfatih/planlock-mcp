@@ -16,6 +16,10 @@ On the following turn the model has to re-derive "where was I" from that noisy h
 
 The result is slower and more chaotic work. Parallelism is often presented as a speedup, but for a local LLM it usually does the opposite: more output to parse, more state to reconcile, and a higher chance that one failing call invalidates the others.
 
+### Naming the failure mode
+
+The technical term for emitting several tool calls in one turn is **parallel tool calling**. The failure described above is narrower: the calls have no dependency order. We call it **uncoordinated fan-out** — also described as *tool call flooding* or *over-eager tool use*. When the same turn edits several files it becomes *fan-out editing* or *scattergun editing*: shots go everywhere without sequencing. The conversation then ends up in **context thrashing** (*state thrashing*), where results interleave and state keeps changing without settling. Parallelism is not the problem; the missing coordination is. Plan Lock replaces that fan-out with one explicit transition at a time.
+
 ## The Idea
 
 - **One atomic, verifiable step at a time.** A step has a clear boundary: it is started, then either completed with a note or failed with a reason.
@@ -80,6 +84,8 @@ so the model always knows which file is the source of truth without searching fo
 ```
 
 The header records the project name (basename of the working directory) and the creation time as a unix timestamp.
+
+A real, fully completed plan from the macOS project `media-studio` is kept in [`examples/plan.md`](./examples/plan.md). It shows six resolved steps, each with a note; that project reported 441 tests passing and a clean build.
 
 | Marker | Meaning |
 | :---: | :--- |
