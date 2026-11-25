@@ -40,11 +40,12 @@ dev = ["pytest", "ruff"]
 planlock = "planlock:main"
 
 [tool.hatch.build.targets.wheel]
-only-include = ["planlock.py"]
+only-include = ["planlock.py", "py.typed"]
 
 [tool.hatch.build.targets.sdist]
 include = [
   "/planlock.py",
+  "/py.typed",
   "/pyproject.toml",
   "/README.md",
   "/README.tr.md",

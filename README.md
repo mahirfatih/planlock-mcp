@@ -133,6 +133,8 @@ pip install .          # provides the `planlock` console script
 python3 /path/to/planlock.py
 ```
 
+Verify the install with `planlock --version` (prints `planlock 1.0.0`).
+
 Register the server with the MCP client (for example `opencode.json`):
 
 ```json

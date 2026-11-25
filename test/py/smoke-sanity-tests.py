@@ -50,3 +50,22 @@ def test_sanity_id_type_safety_and_mismatch():
     # Call with non-existent id
     assert plan_done(999, "unknown") == "id=999 not found"
     assert plan_fail(999, "unknown") == "id=999 not found"
+
+
+def test_smoke_version_flag(tmp_path):
+    """Smoke: `planlock --version` prints the package version and exits 0."""
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    module = Path(__file__).resolve().parents[2] / "planlock.py"
+    result = subprocess.run(
+        [sys.executable, str(module), "--version"],
+        cwd=str(tmp_path),
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    assert result.returncode == 0
+    assert result.stdout.strip() == "planlock 1.0.0"
+    assert result.stderr == ""

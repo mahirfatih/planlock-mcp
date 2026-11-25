@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `[project.urls]` metadata to `pyproject.toml` (Homepage, Repository,
   Issues, Changelog) and a `__version__` constant plus a `--version` flag to
   `planlock.py`, so `planlock --version` verifies an install.
+- Added an empty `py.typed` marker (PEP 561) so type checkers treat the
+  package as typed; included in both the wheel and the sdist.
+- Added a `--version` smoke test and documented the flag in `README.md` and
+  `CONTRIBUTING.md`.
 
 ### Changed
 

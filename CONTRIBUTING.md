@@ -34,6 +34,9 @@ Optional local git hooks (Ruff + basic hygiene) live in
 ./test/test.sh --lint          # Ruff only
 ./test/test.sh --no-install    # skip the pip install step
 ./test/test.sh --only test/py/planlock-tests.py::test_plan_next_lock_active
+
+Verify the console script after installing: `planlock --version` (prints
+`planlock 1.0.0`).
 ```
 
 The runner and both checks also run in CI (`.github/workflows/ci.yml`). CI is
