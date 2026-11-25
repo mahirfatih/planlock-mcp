@@ -3,7 +3,7 @@
 [![CI](https://github.com/mahirfatih/planlock-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/mahirfatih/planlock-mcp/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 ![MCP](https://img.shields.io/badge/MCP-stdio-lightgrey)
-![Tests](https://img.shields.io/badge/tests-62%20passed-brightgreen)
+![Tests](https://img.shields.io/badge/tests-70%20passed-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
 [English](./README.md) | **Türkçe**
@@ -14,6 +14,20 @@ Plan Lock MCP, markdown plan dosyaları üzerinde çalışan yerel/otonom kod aj
 (OpenCode, Claude Code vb.) için Model Context Protocol (MCP) sunucusudur.
 Açık bir **kilit mekanizması** ile ajanın aynı anda birden fazla adımı başlatmasını
 engeller.
+
+---
+
+## 📖 Genel bakış
+
+| Kaynak | Referans |
+| :--- | :--- |
+| 📄 Aktif plan | Proje kökünde `<cwd>/plan.md`, diğer dizinlerde `<cwd>/.opencode/plan.md` |
+| 🧩 MCP yüzeyi | stdio üzerinden `plan_create`, `plan_next`, `plan_done`, `plan_fail` |
+| 🔒 Kilit kuralı | sunucu sürecinde en fazla bir `[~]` adım |
+| 🗃️ Ignore kuralları | kök `.gitignore` veya `.opencode/.gitignore`, gerekirse oluşturulur |
+
+> ⚡ **Tek cümlede:** plan oluştur, bir adım aç, adımı çöz, tekrar et. Markdown
+> dosyası tek doğruluk kaynağıdır; geçişi sunucu zorlar. Başka bir şey yazılmaz.
 
 ---
 
@@ -59,7 +73,19 @@ bildirmelidir (`plan_fail`). Kilit serbest bırakıldıktan sonra sıradaki adı
 
 ---
 
-## ⚙️ Nasıl çalışır?
+## ✨ Özellikler
+
+- 🔒 **Zorlanan kilit** — her çağrıda sunucu tarafından kontrol edilen tek bir `[~]` adım.
+- 📄 **Dış hafıza** — plan, konuşma durumu değil markdown dosyasıdır.
+- 🛡️ **Çökmeye dayanıklı yazma** — serileştirilmiş kilit altında geçici dosya, fsync ve `os.replace`.
+- 📁 **Projeye duyarlı konum** — proje işareti varsa kök `plan.md`, yoksa `.opencode/plan.md`.
+- 🧭 **Yanıtlarda mutlak yol** — model aktif dosyayı aramak zorunda kalmaz.
+- 🧪 **70 test, yedi kategori** — Smoke, Sanity, Unit, Regression, Integration, E2E ve UI + GitHub Actions CI.
+- 🌐 **İngilizce ve Türkçe belgeler** — iki tur eş senkron tutulur.
+
+---
+
+## 🧠 Nasıl çalışır
 
 ### 1. Döngü
 
@@ -114,6 +140,21 @@ stateDiagram-v2
 Aynı anda yalnızca bir adım `Active` olabilir. `Completed` ve `Failed` terminal
 durumlardır: `[x]` `— note:`, `[!]` ise `— error:` eki taşır. `plan_create` döngüyü
 sıfırlar ve önceki dosyayı yedekler.
+
+---
+
+## 🗂️ Neler nereden çekilir
+
+| Kaynak | Ne | Hedef |
+| :--- | :--- | :--- |
+| 🧑‍💻 Ajan | `plan_create` ile verilen `steps` | yeni plan dosyası, önceki planın yedeğiyle |
+| 📄 Aktif plan | ilk bekleyen `[ ]` id ve metni, varsa `[~]` kilidi | `plan_next` yanıtı |
+| 🖊️ Araç argümanları | tek satıra indirilen `note` veya `reason` | `[x] — note:` ya da `[!] — error:` eki |
+| 📁 Çalışma dizini | `.git` veya `pyproject.toml` gibi proje işaretleri | kök `plan.md` veya `.opencode/plan.md` |
+| 🗃️ Mevcut ignore dosyaları | zaten bulunan girdiler | `plan_create` tekrar eklemez |
+
+[`examples/plan.md`](./examples/plan.md) dosyası sunucunun yazdığı tam biçimi
+gösterir. Ağ veya dış model kataloğu kullanılmaz.
 
 ---
 
@@ -208,18 +249,23 @@ Diyagramı okuma:
 
 ---
 
-## 🚀 Kurulum
+## 🚀 Hızlı başlangıç
 
-### 1. Paket
+### 1. Gereksinimler
+
+| Gereksinim | Not |
+| :--- | :--- |
+| Python | 3.10+, çalışma zamanı bağımlılığı `mcp` |
+| MCP istemcisi | OpenCode Desktop veya başka bir stdio MCP istemcisi |
+| Çalışma dizini | proje kökü veya geçici klasör; `cwd` plan konumunu belirler |
+
+### 2. Çalıştır
 
 ```bash
-uv tool install .        # veya: pip install .
-planlock                 # konsol komutu
+pip install .                   # `planlock` konsol komutunu sağlar
+planlock --version              # planlock 1.0.0 yazar
+python3 /path/to/planlock.py    # stdio MCP sunucusunu başlatır
 ```
-
-Kurulumu `planlock --version` ile doğrulayabilirsin (`planlock 1.0.0` yazar).
-
-### 2. MCP istemcisi
 
 MCP istemci yapılandırması (`opencode.json`):
 
@@ -239,7 +285,27 @@ MCP istemci yapılandırması (`opencode.json`):
 `cwd` önemlidir: sunucunun hangi projeye ait olduğunu ve planın proje kökünde mi
 yoksa `.opencode/` altında mı duracağını belirler.
 
-### 3. Ajan promptu
+### 3. Parametreler
+
+| Bayrak veya giriş noktası | Etki |
+| :--- | :--- |
+| *(yok)* | MCP sunucusunu stdio üzerinden başlatır. |
+| `--version` | Sürümü yazar, sunucuyu başlatmadan çıkar. |
+| `plan_create(steps)` | Yeni plan yazar ve mutlak yolunu bildirir. |
+| `plan_next()` | Sıradaki adımı açar veya `PLAN_DONE` döner. |
+| `plan_done(id, note)` / `plan_fail(id, reason)` | Aktif adımı çözer. |
+
+### 4. Örnek çıktı
+
+```text
+Plan Lock created: 3 steps -> /home/user/projeler/api/plan.md
+Next step (id=1, file: /home/user/projeler/api/plan.md): Veritabanı şemasını oluştur
+Step 1 completed: şema yazıldı
+Next step (id=2, file: /home/user/projeler/api/plan.md): API uç noktalarını yaz
+PLAN_DONE
+```
+
+### 5. Ajan promptu
 
 Ajan sistem promptuna eklenecek kural:
 
@@ -256,7 +322,27 @@ Prompt yalnızca hatırlatmadır; kilidi sunucu uygular.
 
 ---
 
-## 📁 Proje yapısı
+## 🤖 Güncel ücretsiz chat modelleri
+
+Plan Lock model kataloğu yayınlamaz veya filtrelemez. Güncel ücretsiz chat
+modelleri [check-opencode-free-models](https://github.com/mahirfatih/check-opencode-free-models)
+projesindedir; bu proje `~/.config/opencode/opencode.jsonc` dosyasını OpenCode
+Console ile eşit tutar. Plan Lock yalnızca yukarıdaki MCP yüzeyini kullanır,
+model yapılandırmasını değiştirmez.
+
+---
+
+## ⏰ Desktop ve crontab
+
+Plan Lock bir zamanlayıcıyla değil, MCP istemcisiyle çalışır. OpenCode Desktop'ta
+sunucuyu `cwd` değeri projeyi gösterecek şekilde kaydet; her araç çağrısı aktif
+planı yeniden okuduğu için crontab girişi gerekmez. Zamanlanmış bir iş yalnızca
+bildirilen plan yolunu okuyup `[~]` takılı adımı raporlayabilir; planı
+düzenlememelidir. Adımı çözmek `plan_done` veya `plan_fail` işidir.
+
+---
+
+## 📂 Proje yapısı
 
 ```text
 planlock-mcp/
@@ -283,7 +369,7 @@ planlock-mcp/
 └── test/
     ├── test.sh                  # Runner: Ruff + pytest
     ├── README.md                # Test klasörü rehberi
-    └── py/                      # Altı test dosyası, 62 durum
+    └── py/                      # Sekiz test dosyası, 70 durum
 ```
 
 Üretilen ve yerel durum (`.venv/`, cache'ler, `dist/`, `uv.lock`, `.wrongstack/`) gitignore'da olduğu için ağaca dahil edilmedi.
@@ -305,16 +391,29 @@ planlock-mcp/
 
 ---
 
-## 🧪 Test ve katkı
+## 🧪 Test ve CI
 
-62 deterministik test çevrimdışı çalışır.
+70 deterministik test çevrimdışı çalışır. `check-opencode-free-models`
+projesindeki katmanlı modelle aynı yedi kategoriye ayrılırlar:
+
+| Kategori | Bayrak | Kapsam |
+| :--- | :--- | :--- |
+| 💨 Smoke | `--smoke` | Derleme, yükleme, araç kaydı, ana akış, `--version`. |
+| ✅ Sanity | `--sanity` | Kesin mesajlar, başlık biçimi, plan konumları. |
+| 🔬 Unit | `--unit` | Geçici dizinde araç davranışı. |
+| 🩹 Regression | `--regression` | Enjeksiyon, eşzamanlılık ve dayanıklılık düzeltmeleri. |
+| 🔗 Integration | `--integration` | Disk üzerinde doğrulanan çok çağrılı akışlar. |
+| 🎯 E2E | `--e2e` | Gerçek stdio JSON-RPC taşıması. |
+| 🖥️ UI | `--ui` | Kullanıcıya görünen MCP istemci yüzeyi (GUI yoktur). |
 
 ```bash
 ./test/test.sh                 # Ruff + pytest
 ./test/test.sh --no-install    # bağımlılık kurulumunu atla
+./test/test.sh --ui            # tek kategori, örn. otomatik UI
 ```
 
 Test haritası ve tüm bayraklar: [`docs/testing/TESTING.md`](./docs/testing/TESTING.md).
+CI her `main` push'unda ve pull request'larda Ruff'ı ve tüm testleri çalıştırır.
 
 ---
 
@@ -335,7 +434,7 @@ tercih eder, böylece kilit yine bırakılabilir.
 
 ---
 
-## 📚 Belgeler
+## 📚 Dokümanlar
 
 | Belge | Amaç |
 | :--- | :--- |
@@ -344,3 +443,20 @@ tercih eder, böylece kilit yine bırakılabilir.
 | [`CHANGELOG.md`](./CHANGELOG.md) | Sürüm geçmişi. |
 | [`SECURITY.md`](./SECURITY.md) | Güvenlik açığı bildirme politikası. |
 | [`LICENSE`](./LICENSE) | MIT lisansı. |
+
+---
+
+## 🔮 Yol haritası
+
+- **✅ Tamamlandı:** dört MCP aracı, zorlanan kilit, fsync destekli atomik
+  yazma, yedekleme ve ignore yönetimi, yedi test kategorisi, CI ve İngilizce
+  ile Türkçe turlar.
+- **Kalan:** aynı çalışma dizinini kullanan birden fazla sunucu süreci için
+  süreçler arası kilit, elle düzenlenmiş planlar için daha sıkı doğrulama ve
+  aktif planı okuyabilen isteğe bağlı salt okunur CLI komutları.
+
+---
+
+## 📄 Lisans
+
+MIT. Bkz. [`LICENSE`](./LICENSE).

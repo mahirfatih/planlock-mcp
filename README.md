@@ -3,7 +3,7 @@
 [![CI](https://github.com/mahirfatih/planlock-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/mahirfatih/planlock-mcp/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 ![MCP](https://img.shields.io/badge/MCP-stdio-lightgrey)
-![Tests](https://img.shields.io/badge/tests-62%20passed-brightgreen)
+![Tests](https://img.shields.io/badge/tests-70%20passed-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
 Plan Lock MCP makes an LLM work through a markdown plan one atomic step at a time, holding a lock on the active step until it is resolved.
@@ -28,6 +28,21 @@ The technical term for emitting several tool calls in one turn is **parallel too
 
 ---
 
+## 📖 Overview
+
+| Source | Reference |
+| :--- | :--- |
+| 📄 Active plan | `<cwd>/plan.md` in a project root, `<cwd>/.opencode/plan.md` elsewhere |
+| 🧩 MCP surface | `plan_create`, `plan_next`, `plan_done`, `plan_fail` over stdio |
+| 🔒 Lock rule | at most one `[~]` step per server process |
+| 🗃️ Ignore rules | root `.gitignore` or `.opencode/.gitignore`, created when missing |
+
+> ⚡ **In one line:** create a plan, activate one step, resolve it, repeat. The
+> markdown file is the source of truth and the server enforces the transition.
+> Nothing else is written.
+
+---
+
 ## 💡 The idea
 
 - **One atomic, verifiable step at a time.** A step has a clear boundary: it is started, then either completed with a note or failed with a reason.
@@ -37,7 +52,19 @@ The technical term for emitting several tool calls in one turn is **parallel too
 
 ---
 
-## ⚙️ How it works
+## ✨ Features
+
+- 🔒 **Enforced lock** — one `[~]` step at a time, checked by the server on every call.
+- 📄 **External memory** — the plan is a markdown file, not conversation state.
+- 🛡️ **Crash-safe writes** — temp file, fsync and `os.replace` under a serialized lock.
+- 📁 **Project-aware location** — root `plan.md` when project markers exist, otherwise `.opencode/plan.md`.
+- 🧭 **Absolute path in responses** — the model never has to search for the active file.
+- 🧪 **70 tests, seven categories** — Smoke, Sanity, Unit, Regression, Integration, E2E and UI, plus GitHub Actions CI.
+- 🌐 **English and Türkçe docs** — both tours stay in sync.
+
+---
+
+## 🧠 How it works
 
 ### 1. The loop
 
@@ -87,6 +114,31 @@ stateDiagram-v2
 ```
 
 Only one step can be `Active` at a time. `Completed` and `Failed` are terminal: `[x]` carries a `— note:` suffix and `[!]` a `— error:` suffix. `plan_create` resets the cycle and backs up the previous file.
+
+---
+
+## 🗂️ What gets pulled from where
+
+| Source | What | Target |
+| :--- | :--- | :--- |
+| 🧑‍💻 Agent | `steps` passed to `plan_create` | new plan file, with a backup of the previous one |
+| 📄 Active plan | first pending `[ ]` id and text, plus any `[~]` lock | `plan_next` response |
+| 🖊️ Tool arguments | `note` or `reason`, collapsed to one line | `[x] — note:` or `[!] — error:` suffix |
+| 📁 Working directory | project markers such as `.git` or `pyproject.toml` | root `plan.md` or `.opencode/plan.md` |
+| 🗃️ Existing ignore files | entries already present | no duplicates added by `plan_create` |
+
+The example plan in [`examples/plan.md`](./examples/plan.md) shows the exact
+format the server writes. No network or external model catalog is consulted.
+
+---
+
+## 🤖 Current free chat models
+
+Plan Lock does not publish or filter a model catalog. The live free chat model
+list lives in [check-opencode-free-models](https://github.com/mahirfatih/check-opencode-free-models),
+which keeps `~/.config/opencode/opencode.jsonc` in sync with the OpenCode
+Console. Plan Lock consumes the MCP surface described above and never changes
+model configuration.
 
 ---
 
@@ -168,18 +220,23 @@ How to read it:
 
 ---
 
-## 🚀 Install & configure
+## 🚀 Quick start
 
-### 1. Install
+### 1. Requirements
+
+| Requirement | Notes |
+| :--- | :--- |
+| Python | 3.10+, with the runtime dependency `mcp` |
+| MCP client | OpenCode Desktop or another stdio MCP client |
+| Working directory | a project root or a scratch folder; `cwd` selects the plan location |
+
+### 2. Run
 
 ```bash
-pip install .          # provides the `planlock` console script
-python3 /path/to/planlock.py
+pip install .                   # provides the `planlock` console script
+planlock --version              # prints planlock 1.0.0
+python3 /path/to/planlock.py    # starts the stdio MCP server
 ```
-
-Verify the install with `planlock --version` (prints `planlock 1.0.0`).
-
-### 2. Register the MCP server
 
 Register the server with the MCP client (for example `opencode.json`):
 
@@ -198,7 +255,27 @@ Register the server with the MCP client (for example `opencode.json`):
 
 The `cwd` matters: it decides which project the server belongs to, and whether the plan sits at the project root or under `.opencode/`.
 
-### 3. Agent prompt
+### 3. Flags
+
+| Flag or entry point | Effect |
+| :--- | :--- |
+| *(none)* | Start the MCP server on stdio. |
+| `--version` | Print the version and exit without starting the server. |
+| `plan_create(steps)` | Write a fresh plan and report its absolute path. |
+| `plan_next()` | Activate the next pending step or report `PLAN_DONE`. |
+| `plan_done(id, note)` / `plan_fail(id, reason)` | Resolve the active step. |
+
+### 4. Example output
+
+```text
+Plan Lock created: 3 steps -> /home/user/projects/api/plan.md
+Next step (id=1, file: /home/user/projects/api/plan.md): Create database schema
+Step 1 completed: schema written
+Next step (id=2, file: /home/user/projects/api/plan.md): Implement API endpoints
+PLAN_DONE
+```
+
+### 5. Agent prompt
 
 Add this directive to the agent's system prompt:
 
@@ -215,7 +292,17 @@ The prompt is a reminder, not the enforcement. The lock itself is in the server.
 
 ---
 
-## 📁 Project structure
+## ⏰ Desktop & crontab
+
+Plan Lock is driven by the MCP client, not by a schedule. In OpenCode Desktop,
+register the server with `cwd` pointed at the project; each tool call re-reads
+the active plan, so no crontab entry is needed. A scheduled job may read the
+reported plan path to report a step stuck as `[~]`, but it must not edit the
+plan. Resolving a step belongs to `plan_done` or `plan_fail`.
+
+---
+
+## 📂 Project structure
 
 ```text
 planlock-mcp/
@@ -242,7 +329,7 @@ planlock-mcp/
 └── test/
     ├── test.sh                  # Runner: Ruff + pytest
     ├── README.md                # Test folder guide
-    └── py/                      # Six test files, 62 cases
+    └── py/                      # Eight test files, 70 cases
 ```
 
 Generated and local state (`.venv/`, caches, `dist/`, `uv.lock`, `.wrongstack/`) is gitignored and left out of the tree.
@@ -259,16 +346,29 @@ Generated and local state (`.venv/`, caches, `dist/`, `uv.lock`, `.wrongstack/`)
 
 ---
 
-## 🧪 Testing
+## 🧪 Testing & CI
 
-The suite has 62 deterministic tests, all offline.
+The suite has 70 deterministic tests, all offline. They are grouped into seven
+categories, following the layered model used by `check-opencode-free-models`:
+
+| Category | Flag | Scope |
+| :--- | :--- | :--- |
+| 💨 Smoke | `--smoke` | Compile, load, register tools, golden path, `--version`. |
+| ✅ Sanity | `--sanity` | Exact messages, header format, plan locations. |
+| 🔬 Unit | `--unit` | Tool behaviour in a fresh temporary directory. |
+| 🩹 Regression | `--regression` | Injection, concurrency and durability fixes. |
+| 🔗 Integration | `--integration` | Multi-call flows verified on disk. |
+| 🎯 E2E | `--e2e` | Real stdio JSON-RPC transport. |
+| 🖥️ UI | `--ui` | User-facing MCP client surface (no GUI exists). |
 
 ```bash
 ./test/test.sh                                   # Ruff + pytest
 ./test/test.sh --no-install                      # skip dependency installation
+./test/test.sh --ui                              # one category, e.g. automated UI
 ```
 
 The full suite map and flags live in [`docs/testing/TESTING.md`](./docs/testing/TESTING.md).
+CI runs Ruff and the full suite on every push to `main` and on pull requests.
 
 ---
 
@@ -289,3 +389,19 @@ The lock is per server process. Two independent server processes pointed at the 
 | [`CHANGELOG.md`](./CHANGELOG.md) | Release history. |
 | [`SECURITY.md`](./SECURITY.md) | Vulnerability reporting policy. |
 | [`LICENSE`](./LICENSE) | MIT license. |
+
+---
+
+## 🔮 Roadmap
+
+- **✅ Done:** four MCP tools, enforced lock, atomic fsync-backed writes, backup
+  and ignore handling, seven test categories, CI, and English and Türkçe tours.
+- **Remaining:** cross-process locking for multiple server processes on one
+  working directory, stricter validation of hand-edited plans, and optional
+  read-only CLI inspection of the active plan.
+
+---
+
+## 📄 License
+
+MIT. See [`LICENSE`](./LICENSE).

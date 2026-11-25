@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Seven `check-opencode-free-models`-style test categories with dedicated
+  runner flags: Smoke, Sanity, Unit, Regression, Integration, E2E and
+  Automated UI. The UI suite checks the MCP client surface because the server
+  is stdio-only and has no GUI.
+- Split the combined smoke/sanity suite into `smoke-tests.py` and
+  `sanity-tests.py`, added contract and UI suites, and documented the category
+  map in both READMEs, `test/README.md` and `docs/testing/TESTING.md`. The full
+  suite now has 70 deterministic cases.
 - CI now runs on every push to `main` and on pull requests, not only manual dispatch.
 - Root `.gitignore` ignores `.opencode/.tmp_plan_*` so files left by an interrupted
   atomic write are never committed.
@@ -55,6 +63,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Aligned the README heading outline in both languages with
+  `check-opencode-free-models`: Overview, Features, Quick start, How it works,
+  What gets pulled from where, Desktop & crontab, Roadmap and License were
+  added where they were missing. Model-catalog sections route to that project
+  because Plan Lock does not manage model configuration.
+- Renamed the core suite to `test/py/core-tests.py` so every shell and Python
+  file name in the repository is kebab-case. `pytest.ini` still accepts
+  `test_*.py` for compatibility.
 - Added a `📁 Project structure` tree to both READMEs, covering the server,
   packaging, test suite, docs and the example plan; generated state is listed as
   intentionally excluded.
@@ -106,9 +122,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 47 deterministic pytest cases covering formatting, lock enforcement,
   gitignore handling, lifecycle states, input injection, concurrency, the real
   MCP stdio transport, crash recovery, atomic writes, and regression cases. The
-  14 core cases are in `test/py/test_planlock.py`.
+  14 core cases are in `test/py/core-tests.py`.
 - A `test/` folder with a single runner, `test/test.sh`, and six suites under
-  `test/py/`: `test_planlock.py` (14 core), `planlock-tests.py` (19 unit),
+  `test/py/`: `core-tests.py` (14 core), `planlock-tests.py` (19 unit),
   `integration-tests.py` (4), `regression-tests.py` (5),
   `smoke-sanity-tests.py` (4), and `planlock-mcp-tests.py` (1 stdio e2e).
 

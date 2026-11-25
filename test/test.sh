@@ -4,11 +4,13 @@
 #
 # Usage:
 #   ./test/test.sh                 # run full test suite (lint + all tests)
+#   ./test/test.sh --smoke         # smoke tests only
+#   ./test/test.sh --sanity        # sanity contract tests only
 #   ./test/test.sh --unit          # unit tests only
+#   ./test/test.sh --regression    # regression tests only
 #   ./test/test.sh --integration   # integration tests only
 #   ./test/test.sh --e2e           # end-to-end stdio transport tests only
-#   ./test/test.sh --smoke         # smoke & sanity checks only
-#   ./test/test.sh --regression    # regression tests only
+#   ./test/test.sh --ui            # automated UI contract tests only
 #   ./test/test.sh --lint          # ruff only, no tests
 #   ./test/test.sh --no-install    # skip dependency install step
 #   ./test/test.sh --only <target> # run specific test file or test node
@@ -26,13 +28,22 @@ INSTALL=1
 TARGETS=()
 
 usage() {
-    sed -n '3,17p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '3,18p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        --smoke)
+            TARGETS+=("test/py/smoke-tests.py")
+            ;;
+        --sanity)
+            TARGETS+=("test/py/sanity-tests.py")
+            ;;
         --unit)
-            TARGETS+=("test/py/planlock-tests.py" "test/py/test_planlock.py")
+            TARGETS+=("test/py/planlock-tests.py" "test/py/core-tests.py")
+            ;;
+        --regression)
+            TARGETS+=("test/py/regression-tests.py")
             ;;
         --integration)
             TARGETS+=("test/py/integration-tests.py")
@@ -40,11 +51,8 @@ while [[ $# -gt 0 ]]; do
         --e2e)
             TARGETS+=("test/py/planlock-mcp-tests.py")
             ;;
-        --smoke | --sanity)
-            TARGETS+=("test/py/smoke-sanity-tests.py")
-            ;;
-        --regression)
-            TARGETS+=("test/py/regression-tests.py")
+        --ui)
+            TARGETS+=("test/py/ui-tests.py")
             ;;
         --lint)
             RUN_TESTS=0

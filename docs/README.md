@@ -29,8 +29,9 @@ Everything in `docs/` is written in **English**. The Turkish quick tour is
 
 ## Testing — how do I verify it
 
-- [`testing/TESTING.md`](./testing/TESTING.md) — the test map, the runner flags,
-  and how to add a new case.
+- [`testing/TESTING.md`](./testing/TESTING.md) — the seven test categories (Smoke,
+  Sanity, Unit, Regression, Integration, E2E, UI), the runner flags, and how to
+  add a new case.
 
 ## Also at the repository root
 

@@ -26,11 +26,13 @@ Optional local git hooks (Ruff + basic hygiene) live in
 
 ```bash
 ./test/test.sh                 # Ruff + pytest (installs dev deps first)
+./test/test.sh --smoke         # smoke tests
+./test/test.sh --sanity        # sanity contract tests
 ./test/test.sh --unit          # unit tests only
+./test/test.sh --regression    # regression tests
 ./test/test.sh --integration   # integration tests
 ./test/test.sh --e2e           # stdio transport tests
-./test/test.sh --smoke         # smoke & sanity tests
-./test/test.sh --regression    # regression tests
+./test/test.sh --ui            # automated UI contract tests
 ./test/test.sh --lint          # Ruff only
 ./test/test.sh --no-install    # skip the pip install step
 ./test/test.sh --only test/py/planlock-tests.py::test_plan_next_lock_active
@@ -61,17 +63,20 @@ Everything ships in a single file, `planlock.py`. Keep it that way:
 
 ## Tests
 
-Add core cases to `test/py/test_planlock.py`, extended unit cases to
-`test/py/planlock-tests.py`, multi-call/disk checks to
-`test/py/integration-tests.py`, bug fixes to `test/py/regression-tests.py`,
-quick health checks to `test/py/smoke-sanity-tests.py`, and tests that cross the
-real stdio transport to `test/py/planlock-mcp-tests.py`. All test files live
-under `test/`. File names use kebab-case with a `-tests.py` suffix (the core
-file keeps `test_planlock.py`), both pinned by `pytest.ini`. The autouse fixture changes the
-working directory to a fresh `tmp_path` for each unit test, and the MCP suite
-spawns the server with `cwd=tmp_path`, so no test touches the real `.opencode/`
-directory. Keep tests deterministic: no network, no sleeps, and no dependency
-on wall-clock time.
+Add core cases to `test/py/core-tests.py`, extended unit cases to
+`test/py/planlock-tests.py`, quick health checks to `test/py/smoke-tests.py`,
+acceptance-contract checks to `test/py/sanity-tests.py`, bug fixes to
+`test/py/regression-tests.py`, multi-call/disk checks to
+`test/py/integration-tests.py`, transport cases to
+`test/py/planlock-mcp-tests.py`, and user-facing MCP surface cases to
+`test/py/ui-tests.py`. All test files live under `test/`. Every shell and
+Python file name is kebab-case; test files carry a `-tests.py` suffix,
+including the core `core-tests.py`. `pytest.ini` also accepts `test_*.py` for
+compatibility. The autouse fixture changes the working directory
+to a fresh `tmp_path` for each unit test, and the MCP suites spawn the server
+with `cwd=tmp_path`, so no test touches the real `.opencode/` directory. Keep
+tests deterministic: no network, no sleeps, and no dependency on wall-clock
+time.
 
 Run one test while iterating:
 
